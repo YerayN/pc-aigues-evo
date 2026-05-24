@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import NavBarPublica from '../../components/layout/NavBarPublica'
-import { supabase } from '../../lib/supabaseClient' // Asegúrate de que la ruta a tu cliente de Supabase sea la correcta
+import { supabase } from '../../lib/supabase'
 
 export default function Reportar() {
   const [ubicacion, setUbicacion] = useState('')

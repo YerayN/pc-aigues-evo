@@ -1,4 +1,3 @@
-import { supabase } from '../../hooks/useSupabase'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
