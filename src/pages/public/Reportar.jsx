@@ -27,9 +27,9 @@ export default function Reportar() {
   const [tipoIncidencia, setTipoIncidencia] = useState('Otros')
   const [descripcion, setDescripcion] = useState('')
   
-  // Datos opcionales del ciudadano
+  // Datos del ciudadano
   const [nombre, setNombre] = useState('')
-  const [telefono, setTelefono] = useState('')
+  const [telefono, setTelefono] = useState('') // ¡Ahora obligatorio!
 
   // Estados de control
   const [enviando, setEnviando] = useState(false)
@@ -38,14 +38,14 @@ export default function Reportar() {
 
   function handleMapClic(latlng) {
     setCoordenadas(latlng)
-    // Dejamos que el usuario mantenga el mapa abierto o lo cierre al marcar, 
-    // pero le damos feedback visual inmediato
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!ubicacionTexto.trim()) {
-      alert('Por favor, describe la ubicación en el campo de texto.')
+    
+    // Validación de ubicación "Mix": Exigimos que haya texto O que haya coordenadas en el mapa
+    if (!ubicacionTexto.trim() && !coordenadas) {
+      alert('Por favor, indica dónde está la incidencia: escribe una descripción de la ubicación o márcala en el mapa.')
       return
     }
 
@@ -57,9 +57,10 @@ export default function Reportar() {
         .insert([
           {
             nombre_ciudadano: nombre || 'Anónimo',
-            telefono_ciudadano: telefono || null,
+            telefono_ciudadano: telefono, // Obligatorio por HTML, se envía seguro
             tipo: tipoIncidencia,
-            ubicacion_texto: ubicacionTexto,
+            // Si no escribió texto pero puso el pin, guardamos una nota automática para la intranet
+            ubicacion_texto: ubicacionTexto.trim() || '📍 Ubicación señalada únicamente en el mapa',
             coordenadas: coordenadas ? `${coordenadas.lat},${coordenadas.lng}` : null,
             descripcion: descripcion,
             estado: 'Pendiente',
@@ -107,18 +108,17 @@ export default function Reportar() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               
-              {/* UBICACIÓN COMPUESTA (TEXTO + MAPA OPCIONAL) */}
+              {/* UBICACIÓN COMPUESTA (TEXTO O MAPA) */}
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 md:p-5 space-y-3">
                 <div>
                   <label className="block text-sm font-bold text-blue-900 mb-1">
                     📍 ¿Dónde está la incidencia? *
                   </label>
                   <p className="text-[11px] text-blue-700/70 mb-2">
-                    Escribe una calle, camino, paraje o el nombre de una finca conocida de Aigües.
+                    Escribe una calle/camino de Aigües **O BIEN** abre el mapa de abajo para marcar el punto exacto.
                   </p>
                   <input
                     type="text"
-                    required
                     value={ubicacionTexto}
                     onChange={e => setUbicacionTexto(e.target.value)}
                     placeholder="Ej: Camino del Pinatell, pasando la balsa a la izquierda"
@@ -136,7 +136,7 @@ export default function Reportar() {
                         ? 'bg-green-100 text-green-700 border-green-300' 
                         : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-100/50'}`}
                   >
-                    {coordenadas ? '🎯 ¡Punto marcado en el mapa! (Cambiar)' : '🗺️ Marcar punto exacto en el mapa (Opcional)'}
+                    {coordenadas ? '🎯 ¡Punto marcado en el mapa! (Cambiar)' : '🗺️ Marcar punto exacto en el mapa (Opcional si escribes la dirección)'}
                   </button>
                 </div>
 
@@ -193,14 +193,14 @@ export default function Reportar() {
                   rows="4"
                   value={descripcion}
                   onChange={e => setDescripcion(e.target.value)}
-                  placeholder="Describe la situación (ej: desprendimiento de piedras, poste de luz colgando, bache profundo...)"
+                  placeholder="Describe la situación (ej: desprendimiento de piedras, poste de luz colgando...)"
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pc-orange outline-none resize-none"
                 />
               </div>
 
               <hr className="border-gray-100 my-2" />
 
-              {/* Datos de contacto opcionales */}
+              {/* Datos de contacto (Nombre opcional, Teléfono OBLIGATORIO) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Tu Nombre (Opcional)</label>
@@ -213,12 +213,13 @@ export default function Reportar() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Teléfono (Opcional)</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Teléfono de Contacto *</label>
                   <input
                     type="tel"
+                    required
                     value={telefono}
                     onChange={e => setTelefono(e.target.value)}
-                    placeholder="Por si te llamamos"
+                    placeholder="Obligatorio para emergencias"
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pc-orange outline-none"
                   />
                 </div>
