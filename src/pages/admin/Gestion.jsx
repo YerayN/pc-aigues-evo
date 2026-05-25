@@ -168,7 +168,8 @@ export default function Gestion() {
   const [tab, setTab] = useState('operativo') 
 
   const [servicios,  setServicios]  = useState([])
-  const [incidencias, setIncidencias] = useState([]) // NUEVO: Estado para incidencias ciudadanas
+  const [incidenciasPendientes, setIncidenciasPendientes] = useState([])
+  const [incidenciasArchivadas, setIncidenciasArchivadas] = useState([]) 
   const [usuarios,   setUsuarios]   = useState([])
   const [registros,  setRegistros]  = useState([])
   const [loading,    setLoading]    = useState(true)
@@ -184,7 +185,7 @@ export default function Gestion() {
     setLoading(true)
     const [{ data: svcs }, { data: incs }, { data: users }, { data: regs }, { data: anun }, { data: alert }] = await Promise.all([
       supabase.from('servicios').select('*'),
-      supabase.from('incidencias').select('*').eq('estado', 'Pendiente').order('creado_el', { ascending: false }), // NUEVO: Traer avisos pendientes
+      supabase.from('incidencias').select('*').order('creado_el', { ascending: false }), // Traemos TODAS las incidencias
       supabase.from('perfiles').select('nombre, rol').order('nombre'),
       supabase.from('registro_horas').select('*').not('salida', 'is', null).order('salida', { ascending: false }),
       supabase.from('anuncios').select('*').eq('id', 1).maybeSingle(),
@@ -192,7 +193,13 @@ export default function Gestion() {
     ])
     const sorted = (svcs ?? []).sort((a, b) => new Date(`${a.fecha}T${a.hora}`) - new Date(`${b.fecha}T${b.hora}`))
     setServicios(sorted)
-    setIncidencias(incs ?? [])
+    
+    // Filtramos las incidencias por su estado
+    if (incs) {
+      setIncidenciasPendientes(incs.filter(i => i.estado === 'Pendiente'))
+      setIncidenciasArchivadas(incs.filter(i => i.estado === 'Archivada' || i.estado === 'Resuelta'))
+    }
+
     setUsuarios(users ?? [])
     setRegistros(regs ?? [])
     if (anun)  setAnuncio({ mensaje: anun.mensaje ?? '', tipo: anun.tipo ?? 'info' })
@@ -203,13 +210,11 @@ export default function Gestion() {
   useEffect(() => { 
     cargarTodo() 
 
-    // NUEVO: Escuchador en tiempo real para enterarte al instante de reportes nuevos en la pantalla
+    // Escuchador en tiempo real
     const channel = supabase
       .channel('realtime-incidencias-gestion')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidencias' }, () => {
-        // Recargar de forma silenciosa si hay un cambio en la tabla
-        supabase.from('incidencias').select('*').eq('estado', 'Pendiente').order('creado_el', { ascending: false })
-          .then(({ data }) => { if (data) setIncidencias(data) })
+        cargarTodo() // Recargamos si hay cambios
       })
       .subscribe()
 
@@ -255,7 +260,7 @@ export default function Gestion() {
   const futuros = servicios.filter(s => new Date(s.fecha) >= hoy)
   const pasados = servicios.filter(s => new Date(s.fecha) <  hoy).reverse()
 
-  // ── Acciones ──
+  // ── Acciones de Servicios ──
   async function crearEvento(e) {
     e.preventDefault()
     const { error } = await supabase.from('servicios').insert([{ ...nuevoEvento, equipo: [], candidatos: [] }])
@@ -274,26 +279,47 @@ export default function Gestion() {
     cargarTodo()
   }
 
-  // NUEVO: Cambiar estado del aviso (Resolver / Archivar)
+  // ── Acciones de Incidencias ──
+
   async function cambiarEstadoIncidencia(id, nuevoEstado) {
     const { error } = await supabase.from('incidencias').update({ estado: nuevoEstado }).eq('id', id)
     if (!error) {
-      Swal.fire({ icon: 'success', title: nuevoEstado === 'Resuelta' ? 'Incidencia Resuelta' : 'Incidencia Archivada', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 })
+      Swal.fire({ icon: 'success', title: 'Incidencia Archivada', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 })
       cargarTodo()
     }
   }
 
-  // NUEVO: Convertir reporte en servicio oficial al instante
-  function transformarEnServicio(inc) {
-    setNuevoEvento({
-      titulo: inc.tipo,
-      fecha: new Date().toISOString().split('T')[0],
-      hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-      descripcion: `Origen Ciudadano: ${inc.descripcion} (${inc.ubicacion_texto})`
+  async function borrarIncidencia(id) {
+    const { isConfirmed } = await Swal.fire({ 
+      title: '¿Rechazar y eliminar?', 
+      text: "La incidencia se borrará por completo de la base de datos y no quedará registro.",
+      icon: 'warning', 
+      showCancelButton: true, 
+      confirmButtonColor: '#d33', 
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar', 
+      cancelButtonText: 'Cancelar' 
     })
-    setModalOpen(true)
+    if (!isConfirmed) return
+
+    const { error } = await supabase.from('incidencias').delete().eq('id', id)
+    if (!error) {
+      Swal.fire({ icon: 'success', title: 'Incidencia eliminada', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 })
+      cargarTodo()
+    }
   }
 
+  function compartirWhatsApp(inc) {
+    // Montamos la URL de Google Maps si existe
+    const enlaceMapa = inc.coordenadas ? `%0A🗺️ *Mapa:* https://www.google.com/maps?q=${inc.coordenadas}` : ''
+    // Texto formateado para WhatsApp (sin datos personales del informante)
+    const texto = `⚠️ *AVISO CIUDADANO* ⚠️%0A%0A🗂️ *Tipo:* ${inc.tipo}%0A📍 *Ubicación:* ${inc.ubicacion_texto}%0A📝 *Detalles:* ${inc.descripcion}${enlaceMapa}`
+    
+    // Abre la app de WhatsApp
+    window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank')
+  }
+
+  // ── Anuncios y Alertas ──
   async function publicarAnuncio(e) {
     e.preventDefault()
     setGuardandoAnuncio(true)
@@ -356,7 +382,7 @@ export default function Gestion() {
           <KPI icon="🎖️" valor={completados.length} label="Servicios totales" color="text-pc-blue" />
           <KPI icon="⏱️" valor={`${totalHoras}h`} label="Horas acumuladas" color="text-purple-600" />
           <KPI icon="👥" valor={usuarios.length} label="Voluntarios" color="text-green-600" />
-          <KPI icon="⚠️" valor={incidencias.length} label="Reportes ciudadanos" color="text-red-600" />
+          <KPI icon="⚠️" valor={incidenciasPendientes.length} label="Avisos pendientes" color="text-red-600" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -417,21 +443,21 @@ export default function Gestion() {
         {tab === 'operativo' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             
-            {/* COLUMNA NUEVA: REPORTE CIUDADANO (Ocupa 1/3 de la pantalla si hay avisos) */}
+            {/* COLUMNA REPORTES CIUDADANOS PENDIENTES */}
             <div className="lg:col-span-1 space-y-4">
               <div className="flex items-center justify-between border-b border-gray-200 pb-2">
                 <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
                   <span>📸</span> Reportes de Vecinos 
-                  {incidencias.length > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">{incidencias.length}</span>}
+                  {incidenciasPendientes.length > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">{incidenciasPendientes.length}</span>}
                 </h3>
               </div>
 
-              {incidencias.length === 0 ? (
+              {incidenciasPendientes.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-6 text-center text-xs text-gray-400 italic">
                   No hay incidencias pendientes de revisión
                 </div>
               ) : (
-                incidencias.map(inc => (
+                incidenciasPendientes.map(inc => (
                   <div key={inc.id} className="bg-white rounded-2xl p-4 shadow-sm border border-red-100 border-t-4 border-t-red-500 space-y-2.5 text-xs">
                     <div className="flex justify-between items-start gap-2">
                       <span className="font-bold text-gray-800 bg-red-50 text-red-700 px-2 py-0.5 rounded-md text-[10px] uppercase">{inc.tipo}</span>
@@ -451,7 +477,7 @@ export default function Gestion() {
                       
                       {/* BOTÓN GOOGLE MAPS EN LA INTRANET */}
                       {inc.coordenadas ? (
-                        <div className="pt-1EDA">
+                        <div className="pt-1">
                           <a 
                             href={`https://www.google.com/maps?q=${inc.coordenadas}`} 
                             target="_blank" 
@@ -465,10 +491,18 @@ export default function Gestion() {
                         <p className="text-[10px] text-gray-400 italic pt-1">📍 No se marcaron coordenadas en el mapa</p>
                       )}
                     </div>
+                    
+                    {/* NUEVOS BOTONES DE ACCIÓN */}
                     <div className="grid grid-cols-3 gap-1.5 pt-2">
-                      <button onClick={() => transformarEnServicio(inc)} className="bg-pc-orange text-white py-1.5 rounded-lg font-bold hover:bg-orange-600 transition text-[10px]">🚨 Activar</button>
-                      <button onClick={() => cambiarEstadoIncidencia(inc.id, 'Resuelta')} className="bg-green-50 text-green-700 border border-green-200 py-1.5 rounded-lg font-bold hover:bg-green-100 transition text-[10px]">✅ Ok</button>
-                      <button onClick={() => cambiarEstadoIncidencia(inc.id, 'Archivada')} className="bg-gray-50 text-gray-500 border border-gray-200 py-1.5 rounded-lg font-bold hover:bg-gray-100 transition text-[10px]">📂 Archivar</button>
+                      <button onClick={() => compartirWhatsApp(inc)} className="bg-[#25D366] text-white py-1.5 rounded-lg font-bold hover:bg-[#20bd5a] transition text-[10px] flex items-center justify-center gap-1">
+                        💬 Enviar
+                      </button>
+                      <button onClick={() => cambiarEstadoIncidencia(inc.id, 'Archivada')} className="bg-gray-100 text-gray-600 border border-gray-200 py-1.5 rounded-lg font-bold hover:bg-gray-200 transition text-[10px]">
+                        📂 Archivar
+                      </button>
+                      <button onClick={() => borrarIncidencia(inc.id)} className="bg-red-50 text-red-600 border border-red-200 py-1.5 rounded-lg font-bold hover:bg-red-100 transition text-[10px]">
+                        🗑️ Rechazar
+                      </button>
                     </div>
                   </div>
                 ))
@@ -587,17 +621,53 @@ export default function Gestion() {
 
         {/* ══ TAB: HISTORIAL ══════════════════════════════════════ */}
         {tab === 'historial' && (
-          <div>
-            {pasados.length === 0 ? (
-              <EmptyState icon="📂" title="Sin historial" description="Los eventos pasados aparecerán aquí." />
-            ) : (
-              <div className="space-y-4 opacity-80">
-                {pasados.map(ev => (
-                  <TarjetaServicio key={ev.id} evento={ev} usuarios={usuarios}
-                    esHistorial={true} onBorrar={borrarEvento} onRefresh={cargarTodo} />
-                ))}
-              </div>
-            )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            
+            {/* COLUMNA 1: SERVICIOS PASADOS */}
+            <div>
+              <h3 className="font-bold text-gray-800 text-sm border-b border-gray-200 pb-2 mb-4">📂 Historial de Servicios</h3>
+              {pasados.length === 0 ? (
+                <EmptyState icon="📂" title="Sin historial" description="Los eventos pasados aparecerán aquí." />
+              ) : (
+                <div className="space-y-4 opacity-80">
+                  {pasados.map(ev => (
+                    <TarjetaServicio key={ev.id} evento={ev} usuarios={usuarios}
+                      esHistorial={true} onBorrar={borrarEvento} onRefresh={cargarTodo} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* COLUMNA 2: REPORTES CIUDADANOS ARCHIVADOS */}
+            <div>
+              <h3 className="font-bold text-gray-800 text-sm border-b border-gray-200 pb-2 mb-4">🗄️ Avisos Ciudadanos Archivados</h3>
+              {incidenciasArchivadas.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-6 text-center text-xs text-gray-400 italic">
+                  No hay incidencias en el archivo
+                </div>
+              ) : (
+                <div className="space-y-4 opacity-75">
+                  {incidenciasArchivadas.map(inc => (
+                    <div key={inc.id} className="bg-white rounded-xl p-3 shadow-sm border border-gray-200 text-xs">
+                      <div className="flex justify-between items-start gap-2 mb-1">
+                        <span className="font-bold text-gray-600 uppercase">{inc.tipo}</span>
+                        <span className="text-[10px] text-gray-400 font-medium">{new Date(inc.creado_el).toLocaleDateString('es-ES')}</span>
+                      </div>
+                      <p className="text-gray-500 italic mb-1.5">{inc.ubicacion_texto}</p>
+                      <p className="text-gray-500">{inc.descripcion}</p>
+                      <div className="pt-2 mt-2 border-t border-gray-100 text-[10px] flex justify-between items-center">
+                        <span className="text-gray-400">👤 {inc.nombre_ciudadano}</span>
+                        {/* Botón para borrar definitivamente incluso desde el historial */}
+                        <button onClick={() => borrarIncidencia(inc.id)} className="text-red-400 hover:text-red-600 transition font-bold">
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
