@@ -241,6 +241,7 @@ export default function Dashboard() {
               <ModCard
                 to="/gestion"
                 icon="gestion"
+                label="Gestión jefatura"
                 desc="Servicios, alertas y estadísticas"
                 accent="bg-orange-50 text-orange-600 group-hover:bg-pc-orange group-hover:text-white"
               />
