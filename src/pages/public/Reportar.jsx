@@ -74,7 +74,7 @@ async function handleSubmit(e) {
 
     // 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT
     const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM' // Tu token real de la captura
-    const idGrupo = '-5112036215' // Asegúrate de que este sea el ID de tu grupo (con el menos delante)
+    const idGrupo = '-1003973593092' // Asegúrate de que este sea el ID de tu grupo (con el menos delante)
 
     // Texto limpio sin asteriscos de Markdown para evitar que Telegram se atragante con los caracteres
     const mensajeTelegram = `🚨 REPORTE CIUDADANO ENVIADO 🚨\n\n` +
