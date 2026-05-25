@@ -40,43 +40,73 @@ export default function Reportar() {
     setCoordenadas(latlng)
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    
-    // Validación de ubicación "Mix": Exigimos que haya texto O que haya coordenadas en el mapa
-    if (!ubicacionTexto.trim() && !coordenadas) {
-      alert('Por favor, indica dónde está la incidencia: escribe una descripción de la ubicación o márcala en el mapa.')
-      return
-    }
-
-    setEnviando(true)
-
-    try {
-      const { error } = await supabase
-        .from('incidencias')
-        .insert([
-          {
-            nombre_ciudadano: nombre || 'Anónimo',
-            telefono_ciudadano: telefono, // Obligatorio por HTML, se envía seguro
-            tipo: tipoIncidencia,
-            // Si no escribió texto pero puso el pin, guardamos una nota automática para la intranet
-            ubicacion_texto: ubicacionTexto.trim() || '📍 Ubicación señalada únicamente en el mapa',
-            coordenadas: coordenadas ? `${coordenadas.lat},${coordenadas.lng}` : null,
-            descripcion: descripcion,
-            estado: 'Pendiente',
-            creado_el: new Date().toISOString()
-          }
-        ])
-
-      if (error) throw error
-      setEnviadoExito(true)
-    } catch (error) {
-      console.error('Error al enviar:', error)
-      alert('Hubo un problema al enviar el reporte. Por favor, inténtalo de nuevo.')
-    } finally {
-      setEnviando(false)
-    }
+async function handleSubmit(e) {
+  e.preventDefault()
+  
+  // Validación de ubicación: Exigimos texto O coordenadas en el mapa
+  if (!ubicacionTexto.trim() && !coordenadas) {
+    alert('Por favor, indica dónde está la incidencia: escribe una descripción de la ubicación o márcala en el mapa.')
+    return
   }
+
+  setEnviando(true)
+
+  try {
+    const textoUbicacionFinal = ubicacionTexto.trim() || '📍 Ubicación señalada únicamente en el mapa'
+
+    // 1. Guardamos en tu tabla de Supabase para la intranet
+    const { error: supabaseError } = await supabase
+      .from('incidencias')
+      .insert([
+        {
+          nombre_ciudadano: nombre || 'Anónimo',
+          telefono_ciudadano: telefono,
+          tipo: tipoIncidencia,
+          ubicacion_texto: textoUbicacionFinal,
+          coordenadas: coordenadas ? `${coordenadas.lat},${coordenadas.lng}` : null,
+          descripcion: descripcion,
+          estado: 'Pendiente',
+          creado_el: new Date().toISOString()
+        }
+      ])
+
+    if (supabaseError) throw supabaseError
+
+    // 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT
+    const tokenBot = 'TU_TOKEN_DE_TELEGRAM' // Pon aquí el token de tu bot (ej: 5112036215:AA...)
+    const idGrupo = '-1002345678901' // Pon aquí el ID de tu grupo de Telegram (con el menos delante)
+
+    // Preparamos el texto limpio con saltos de línea normales
+    const mensajeTelegram = `🚨 *NUEVO REPORTE CIUDADANO* 🚨\n\n` +
+                            `🗂️ *Tipo:* ${tipoIncidencia}\n` +
+                            `📍 *Ubicación:* ${textoUbicacionFinal}\n` +
+                            `📝 *Detalles:* ${descripcion}\n` +
+                            `👤 *Informante:* ${nombre || 'Anónimo'}\n` +
+                            `📞 *Teléfono:* ${telefono}`;
+
+    // Hacemos la llamada HTTP directa a Telegram
+    await fetch(`https://api.telegram.org/bot${tokenBot}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        chat_id: idGrupo,
+        text: mensajeTelegram,
+        parse_mode: 'Markdown'
+      })
+    })
+
+    // Si todo ha ido bien, marcamos éxito
+    setEnviadoExito(true)
+
+  } catch (error) {
+    console.error('Error en el proceso:', error)
+    alert('Hubo un problema al enviar el reporte. Por favor, inténtalo de nuevo.')
+  } finally {
+    setEnviando(false)
+  }
+}
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
