@@ -14,18 +14,19 @@ import { ACTIVIDADES } from '../../constants/actividades'
 const COLOR_HEX = { rojo: '#e11d48', azul: '#2563eb', verde: '#16a34a', naranja: '#ea580c' }
 const COLOR_ACT = Object.fromEntries(ACTIVIDADES.map(a => [a.value, a.color]))
 
+// 1. KPI Ajustado para móviles: menos padding, texto más pequeño y adaptable
 function KPI({ valor, label, sub, color = 'text-pc-blue', icon }) {
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-pc border border-gray-100 flex items-center gap-4">
+    <div className="bg-white rounded-2xl p-3 md:p-5 shadow-pc border border-gray-100 flex items-center gap-2 md:gap-4">
       {icon && (
-        <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-2xl shrink-0">
+        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gray-50 flex items-center justify-center text-lg md:text-2xl shrink-0">
           {icon}
         </div>
       )}
       <div className="min-w-0">
-        <p className={`text-2xl font-bold leading-none ${color}`}>{valor}</p>
-        <p className="text-sm font-medium text-gray-700 mt-1">{label}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        <p className={`text-lg md:text-2xl font-bold leading-none ${color}`}>{valor}</p>
+        <p className="text-[11px] md:text-sm font-medium text-gray-700 mt-1 leading-tight">{label}</p>
+        {sub && <p className="text-[10px] md:text-xs text-gray-400 mt-0.5">{sub}</p>}
       </div>
     </div>
   )
@@ -391,7 +392,7 @@ export default function Gestion() {
             <p className="text-xs text-indigo-400 mb-3">Visible en el Dashboard de todos los voluntarios</p>
             <form onSubmit={publicarAnuncio} className="flex flex-col sm:flex-row gap-2">
               <select value={anuncio.tipo} onChange={e => setAnuncio(a => ({ ...a, tipo: e.target.value }))}
-                className="sm:w-28 px-3 py-2 border border-indigo-200 rounded-xl text-sm bg-white focus:outline-none">
+                className="w-full sm:w-28 px-3 py-2 border border-indigo-200 rounded-xl text-sm bg-white focus:outline-none">
                 <option value="info">🔵 Info</option>
                 <option value="aviso">🟡 Aviso</option>
                 <option value="urgente">🔴 Urgente</option>
@@ -400,7 +401,7 @@ export default function Gestion() {
                 onChange={e => setAnuncio(a => ({ ...a, mensaje: e.target.value }))}
                 placeholder="Mensaje para el equipo..."
                 className="flex-1 px-3 py-2 border border-indigo-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-              <Button type="submit" loading={guardandoAnuncio} className="bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap text-sm px-4">
+              <Button type="submit" loading={guardandoAnuncio} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap text-sm px-4">
                 Publicar
               </Button>
             </form>
@@ -411,7 +412,7 @@ export default function Gestion() {
             <p className="text-xs text-red-400 mb-3">Visible en la <strong>web pública</strong> para los vecinos</p>
             <form onSubmit={publicarAlerta} className="flex flex-col sm:flex-row gap-2">
               <select value={alertaPublica.color} onChange={e => setAlertaPublica(a => ({ ...a, color: e.target.value }))}
-                className="sm:w-36 px-3 py-2 border border-red-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
+                className="w-full sm:w-36 px-3 py-2 border border-red-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
                 <option value="verde">🟢 Verde</option>
                 <option value="azul">🔵 Azul</option>
                 <option value="amarillo">🟡 Amarillo</option>
@@ -422,19 +423,20 @@ export default function Gestion() {
                 onChange={e => setAlertaPublica(a => ({ ...a, mensaje: e.target.value }))}
                 placeholder="Ej: Situación de normalidad..."
                 className="flex-1 px-3 py-2 border border-red-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
-              <Button type="submit" loading={guardandoAlerta} className="bg-red-600 hover:bg-red-700 text-white whitespace-nowrap text-sm px-4">
+              <Button type="submit" loading={guardandoAlerta} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white whitespace-nowrap text-sm px-4">
                 Actualizar
               </Button>
             </form>
           </div>
         </div>
 
-        <div className="flex gap-1 bg-white border border-gray-200 p-1 rounded-2xl shadow-sm mb-4 w-full sm:w-fit">
+        {/* 2. Contenedor de Pestañas con scroll adaptativo para móviles */}
+        <div className="flex bg-white border border-gray-200 p-1 rounded-2xl shadow-sm mb-4 w-full sm:w-fit overflow-x-auto">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition flex-1 sm:flex-none justify-center
+              className={`flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-[11px] md:text-sm font-bold transition whitespace-nowrap shrink-0 sm:shrink
                 ${tab === t.id ? 'bg-pc-blue text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
-              <span>{t.icon}</span> {t.label}
+              <span className="text-sm md:text-base">{t.icon}</span> {t.label}
             </button>
           ))}
         </div>
@@ -492,7 +494,7 @@ export default function Gestion() {
                       )}
                     </div>
                     
-                    {/* NUEVOS BOTONES DE ACCIÓN */}
+                    {/* BOTONES DE ACCIÓN */}
                     <div className="grid grid-cols-3 gap-1.5 pt-2">
                       <button onClick={() => compartirWhatsApp(inc)} className="bg-[#25D366] text-white py-1.5 rounded-lg font-bold hover:bg-[#20bd5a] transition text-[10px] flex items-center justify-center gap-1">
                         💬 Enviar
