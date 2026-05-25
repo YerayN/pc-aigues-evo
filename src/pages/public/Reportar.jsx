@@ -72,39 +72,51 @@ export default function Reportar() {
 
       if (supabaseError) throw supabaseError
 
-      // 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT (Formato corregido con comillas invertidas)
-      const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM'
-      const idGrupo = '-1003973593092'
+// 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT (Con enlace opcional a Google Maps)
+    const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM'
+    const idGrupo = '-1003973593092'
 
-      // Usamos comillas invertidas dando los saltos de línea con el Enter del teclado.
-      // Así evitamos los conflictos de escape que daban el Error 400.
-      const mensajeTelegram = `🚨 REPORTE CIUDADANO ENVIADO 🚨
+    // Función rápida para limpiar textos y que el Markdown de Telegram no se rompa con caracteres especiales
+    const limpiarMarkdown = (texto) => {
+      if (!texto) return ''
+      return texto.replace(/[*_`[\]()]/g, '') // Quita caracteres conflictivos
+    }
 
-🗂️ Tipo: ${tipoIncidencia}
-📍 Ubicación: ${textoUbicacionFinal}
-📝 Detalles: ${descripcion}
-👤 Informante: ${nombre || 'Anónimo'}
-📞 Teléfono: ${telefono}`
+    // 1. Montamos la base del mensaje limpio
+    let mensajeTelegram = `🚨 *NUEVO REPORTE CIUDADANO* 🚨\n\n` +
+                          `🗂️ *Tipo:* ${limpiarMarkdown(tipoIncidencia)}\n` +
+                          `📍 *Ubicación:* ${limpiarMarkdown(textoUbicacionFinal)}\n` +
+                          `📝 *Detalles:* ${limpiarMarkdown(descripcion)}\n` +
+                          `👤 *Informante:* ${limpiarMarkdown(nombre) || 'Anónimo'}\n` +
+                          `📞 *Teléfono:* ${limpiarMarkdown(telefono)}`
 
-      // Hacemos la llamada HTTP directa a Telegram
-      const respuestaTelegram = await fetch(`https://api.telegram.org/bot${tokenBot}/sendMessage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          chat_id: idGrupo,
-          text: mensajeTelegram
-        })
+    // 2. SI EL VECINO USÓ EL MAPA: Le acoplamos el enlace directo a Google Maps
+    if (coordenadas) {
+      const urlMaps = `https://www.google.com/maps?q=${coordenadas.lat},${coordenadas.lng}`
+      mensajeTelegram += `\n\n🗺️ *Mapa:* [Ver ubicación exacta en Google Maps](${urlMaps})`
+    }
+
+    // Hacemos la llamada HTTP directa a Telegram con el parse_mode reactivado de forma segura
+    const respuestaTelegram = await fetch(`https://api.telegram.org/bot${tokenBot}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        chat_id: idGrupo,
+        text: mensajeTelegram,
+        parse_mode: 'Markdown',
+        disable_web_page_preview: false // Permite que se vea una vista previa del mapa si queréis
       })
+    })
 
-      if (!respuestaTelegram.ok) {
-        const datosError = await respuestaTelegram.json()
-        throw new Error(`Telegram respondió con error: ${datosError.description}`)
-      }
+    if (!respuestaTelegram.ok) {
+      const datosError = await respuestaTelegram.json()
+      throw new Error(`Telegram respondió con error: ${datosError.description}`)
+    }
 
-      // Si todo ha ido bien, marcamos éxito
-      setEnviadoExito(true)
+    // Si todo ha ido bien, marcamos éxito
+    setEnviadoExito(true)
 
     } catch (error) {
       console.error('Error en el proceso:', error)
