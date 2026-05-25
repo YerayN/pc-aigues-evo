@@ -73,8 +73,8 @@ async function handleSubmit(e) {
     if (supabaseError) throw supabaseError
 
     // 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT
-    const tokenBot = 'TU_TOKEN_DE_TELEGRAM' // Pon aquí el token de tu bot (ej: 5112036215:AA...)
-    const idGrupo = '-1002345678901' // Pon aquí el ID de tu grupo de Telegram (con el menos delante)
+    const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM' // Pon aquí el token de tu bot (ej: 5112036215:AA...)
+    const idGrupo = '-5112036215' // Pon aquí el ID de tu grupo de Telegram (con el menos delante)
 
     // Preparamos el texto limpio con saltos de línea normales
     const mensajeTelegram = `🚨 *NUEVO REPORTE CIUDADANO* 🚨\n\n` +
