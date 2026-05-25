@@ -78,7 +78,7 @@ export default function Home() {
               {/* Chip */}
               <div className="inline-flex items-center gap-2 bg-pc-orange/10 text-pc-orange px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
                 <span className="w-2 h-2 rounded-full bg-pc-orange animate-pulse" />
-                Voluntarios · Aigües · Valencia
+                Voluntarios · Aigües · Alicante
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-[1.1] tracking-tight mb-6">
