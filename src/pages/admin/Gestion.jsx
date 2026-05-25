@@ -11,10 +11,9 @@ import {
 import Swal from 'sweetalert2'
 import { ACTIVIDADES } from '../../constants/actividades'
 
-// ─── Paleta actividades (derivada de constante compartida) ───
+const COLOR_HEX = { rojo: '#e11d48', azul: '#2563eb', verde: '#16a34a', naranja: '#ea580c' }
 const COLOR_ACT = Object.fromEntries(ACTIVIDADES.map(a => [a.value, a.color]))
 
-// ─── Tarjeta KPI ───────────────────────────────────────────────
 function KPI({ valor, label, sub, color = 'text-pc-blue', icon }) {
   return (
     <div className="bg-white rounded-2xl p-5 shadow-pc border border-gray-100 flex items-center gap-4">
@@ -32,7 +31,6 @@ function KPI({ valor, label, sub, color = 'text-pc-blue', icon }) {
   )
 }
 
-// ─── Tarjeta de servicio ───────────────────────────────────────
 function TarjetaServicio({ evento, usuarios, esHistorial, onBorrar, onRefresh }) {
   const [guardando, setGuardando] = useState(false)
   const equipo     = evento.equipo     ?? []
@@ -164,13 +162,13 @@ function TarjetaServicio({ evento, usuarios, esHistorial, onBorrar, onRefresh })
   )
 }
 
-// ─── PÁGINA PRINCIPAL ──────────────────────────────────────────
 export default function Gestion() {
   const { perfil } = useAuth()
 
-  const [tab, setTab] = useState('operativo') // operativo | stats | historial
+  const [tab, setTab] = useState('operativo') 
 
   const [servicios,  setServicios]  = useState([])
+  const [incidencias, setIncidencias] = useState([]) // NUEVO: Estado para incidencias ciudadanas
   const [usuarios,   setUsuarios]   = useState([])
   const [registros,  setRegistros]  = useState([])
   const [loading,    setLoading]    = useState(true)
@@ -184,8 +182,9 @@ export default function Gestion() {
 
   const cargarTodo = useCallback(async () => {
     setLoading(true)
-    const [{ data: svcs }, { data: users }, { data: regs }, { data: anun }, { data: alert }] = await Promise.all([
+    const [{ data: svcs }, { data: incs }, { data: users }, { data: regs }, { data: anun }, { data: alert }] = await Promise.all([
       supabase.from('servicios').select('*'),
+      supabase.from('incidencias').select('*').eq('estado', 'Pendiente').order('creado_el', { ascending: false }), // NUEVO: Traer avisos pendientes
       supabase.from('perfiles').select('nombre, rol').order('nombre'),
       supabase.from('registro_horas').select('*').not('salida', 'is', null).order('salida', { ascending: false }),
       supabase.from('anuncios').select('*').eq('id', 1).maybeSingle(),
@@ -193,6 +192,7 @@ export default function Gestion() {
     ])
     const sorted = (svcs ?? []).sort((a, b) => new Date(`${a.fecha}T${a.hora}`) - new Date(`${b.fecha}T${b.hora}`))
     setServicios(sorted)
+    setIncidencias(incs ?? [])
     setUsuarios(users ?? [])
     setRegistros(regs ?? [])
     if (anun)  setAnuncio({ mensaje: anun.mensaje ?? '', tipo: anun.tipo ?? 'info' })
@@ -200,7 +200,21 @@ export default function Gestion() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { cargarTodo() }, [cargarTodo])
+  useEffect(() => { 
+    cargarTodo() 
+
+    // NUEVO: Escuchador en tiempo real para enterarte al instante de reportes nuevos en la pantalla
+    const channel = supabase
+      .channel('realtime-incidencias-gestion')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'incidencias' }, () => {
+        // Recargar de forma silenciosa si hay un cambio en la tabla
+        supabase.from('incidencias').select('*').eq('estado', 'Pendiente').order('creado_el', { ascending: false })
+          .then(({ data }) => { if (data) setIncidencias(data) })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [cargarTodo])
 
   // ── Datos estadísticas ──
   const completados = useMemo(() => registros.filter(r => r.salida), [registros])
@@ -260,10 +274,29 @@ export default function Gestion() {
     cargarTodo()
   }
 
+  // NUEVO: Cambiar estado del aviso (Resolver / Archivar)
+  async function cambiarEstadoIncidencia(id, nuevoEstado) {
+    const { error } = await supabase.from('incidencias').update({ estado: nuevoEstado }).eq('id', id)
+    if (!error) {
+      Swal.fire({ icon: 'success', title: nuevoEstado === 'Resuelta' ? 'Incidencia Resuelta' : 'Incidencia Archivada', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 })
+      cargarTodo()
+    }
+  }
+
+  // NUEVO: Convertir reporte en servicio oficial al instante
+  function transformarEnServicio(inc) {
+    setNuevoEvento({
+      titulo: inc.tipo,
+      fecha: new Date().toISOString().split('T')[0],
+      hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      descripcion: `Origen Ciudadano: ${inc.descripcion} (${inc.ubicacion_texto})`
+    })
+    setModalOpen(true)
+  }
+
   async function publicarAnuncio(e) {
     e.preventDefault()
     setGuardandoAnuncio(true)
-    // upsert garantiza que funciona aunque la fila no exista
     const { error } = await supabase.from('anuncios')
       .upsert({ id: 1, mensaje: anuncio.mensaje, tipo: anuncio.tipo, created_at: new Date() })
     setGuardandoAnuncio(false)
@@ -293,7 +326,6 @@ export default function Gestion() {
     <div className="min-h-screen bg-gray-50">
       <NavBarIntranet />
 
-      {/* ── Header ── */}
       <div className="bg-pc-blue pb-6 pt-4">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -319,19 +351,15 @@ export default function Gestion() {
         </div>
       </div>
 
-      {/* ── KPIs ── */}
       <div className="container mx-auto px-4 max-w-6xl -mt-1 pb-2">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <KPI icon="🎖️" valor={completados.length} label="Servicios totales" color="text-pc-blue" />
           <KPI icon="⏱️" valor={`${totalHoras}h`} label="Horas acumuladas" color="text-purple-600" />
           <KPI icon="👥" valor={usuarios.length} label="Voluntarios" color="text-green-600" />
-          <KPI icon="📅" valor={futuros.length} label="Próximos eventos" color="text-pc-orange" />
+          <KPI icon="⚠️" valor={incidencias.length} label="Reportes ciudadanos" color="text-red-600" />
         </div>
 
-        {/* ── Alertas ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-
-          {/* Megafonía interna */}
           <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
             <h3 className="font-bold text-indigo-900 text-sm mb-0.5 flex items-center gap-2">📢 Megafonía Voluntarios</h3>
             <p className="text-xs text-indigo-400 mb-3">Visible en el Dashboard de todos los voluntarios</p>
@@ -352,7 +380,6 @@ export default function Gestion() {
             </form>
           </div>
 
-          {/* Alerta pública */}
           <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
             <h3 className="font-bold text-red-900 text-sm mb-0.5 flex items-center gap-2">🚨 Alerta Población</h3>
             <p className="text-xs text-red-400 mb-3">Visible en la <strong>web pública</strong> para los vecinos</p>
@@ -376,7 +403,6 @@ export default function Gestion() {
           </div>
         </div>
 
-        {/* ── Tabs ── */}
         <div className="flex gap-1 bg-white border border-gray-200 p-1 rounded-2xl shadow-sm mb-4 w-full sm:w-fit">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -389,31 +415,77 @@ export default function Gestion() {
 
         {/* ══ TAB: OPERATIVO ══════════════════════════════════════ */}
         {tab === 'operativo' && (
-          <div className="space-y-4">
-            {futuros.length === 0 ? (
-              <EmptyState icon="📭" title="No hay servicios próximos"
-                description="Crea el primero con el botón de arriba."
-                action={
-                  <button onClick={() => setModalOpen(true)}
-                    className="mt-4 bg-pc-orange text-white font-bold px-5 py-2 rounded-xl hover:bg-pc-orange-dark transition">
-                    ＋ Nuevo Evento
-                  </button>
-                }
-              />
-            ) : futuros.map(ev => (
-              <TarjetaServicio key={ev.id} evento={ev} usuarios={usuarios}
-                esHistorial={false} onBorrar={borrarEvento} onRefresh={cargarTodo} />
-            ))}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            
+            {/* COLUMNA NUEVA: REPORTE CIUDADANO (Ocupa 1/3 de la pantalla si hay avisos) */}
+            <div className="lg:col-span-1 space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                  <span>📸</span> Reportes de Vecinos 
+                  {incidencias.length > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">{incidencias.length}</span>}
+                </h3>
+              </div>
+
+              {incidencias.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-6 text-center text-xs text-gray-400 italic">
+                  No hay incidencias pendientes de revisión
+                </div>
+              ) : (
+                incidencias.map(inc => (
+                  <div key={inc.id} className="bg-white rounded-2xl p-4 shadow-sm border border-red-100 border-t-4 border-t-red-500 space-y-2.5 text-xs">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-bold text-gray-800 bg-red-50 text-red-700 px-2 py-0.5 rounded-md text-[10px] uppercase">{inc.tipo}</span>
+                      <span className="text-[10px] text-gray-400 font-medium">⏱️ {new Date(inc.creado_el).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-700">📍 Ubicación:</p>
+                      <p className="text-gray-600 italic bg-gray-50 p-2 rounded-lg mt-0.5">{inc.ubicacion_texto}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-700">📝 Descripción:</p>
+                      <p className="text-gray-600 font-medium">{inc.descripcion}</p>
+                    </div>
+                    <div className="pt-1 text-[10px] text-gray-400 flex flex-col gap-0.5 border-t border-gray-50">
+                      <p>👤 <strong>Informante:</strong> {inc.nombre_ciudadano}</p>
+                      <p>📞 <strong>Teléfono:</strong> <a href={`tel:${inc.telefono_ciudadano}`} className="text-blue-600 underline font-semibold">{inc.telefono_ciudadano}</a></p>
+                      {inc.coordenadas && <p>🌐 <strong>Coordenadas:</strong> {inc.coordenadas}</p>}
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5 pt-2">
+                      <button onClick={() => transformarEnServicio(inc)} className="bg-pc-orange text-white py-1.5 rounded-lg font-bold hover:bg-orange-600 transition text-[10px]">🚨 Activar</button>
+                      <button onClick={() => cambiarEstadoIncidencia(inc.id, 'Resuelta')} className="bg-green-50 text-green-700 border border-green-200 py-1.5 rounded-lg font-bold hover:bg-green-100 transition text-[10px]">✅ Ok</button>
+                      <button onClick={() => cambiarEstadoIncidencia(inc.id, 'Archivada')} className="bg-gray-50 text-gray-500 border border-gray-200 py-1.5 rounded-lg font-bold hover:bg-gray-100 transition text-[10px]">📂 Archivar</button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* COLUMNA PRÓXIMOS SERVICIOS (Toma las 2/3 partes restantes) */}
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="font-bold text-gray-800 text-sm border-b border-gray-200 pb-2">📅 Próximos Servicios Planificados</h3>
+              {futuros.length === 0 ? (
+                <EmptyState icon="📭" title="No hay servicios próximos"
+                  description="Crea el primero con el botón de arriba."
+                  action={
+                    <button onClick={() => setModalOpen(true)}
+                      className="mt-4 bg-pc-orange text-white font-bold px-5 py-2 rounded-xl hover:bg-pc-orange-dark transition">
+                      ＋ Nuevo Evento
+                    </button>
+                  }
+                />
+              ) : futuros.map(ev => (
+                <TarjetaServicio key={ev.id} evento={ev} usuarios={usuarios}
+                  esHistorial={false} onBorrar={borrarEvento} onRefresh={cargarTodo} />
+              ))}
+            </div>
+
           </div>
         )}
 
         {/* ══ TAB: ESTADÍSTICAS ═══════════════════════════════════ */}
         {tab === 'stats' && (
           <div className="space-y-4">
-
-            {/* Ranking + actividad */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
               <Card>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-gray-700">🏆 Ranking de Voluntarios</h3>
@@ -455,7 +527,6 @@ export default function Gestion() {
               </Card>
             </div>
 
-            {/* Actividad mensual */}
             <Card>
               <h3 className="font-bold text-gray-700 mb-4">📅 Actividad mensual (últimos 6 meses)</h3>
               {porMes.length === 0 ? (
@@ -472,7 +543,6 @@ export default function Gestion() {
               )}
             </Card>
 
-            {/* Últimos registros */}
             <Card>
               <h3 className="font-bold text-gray-700 mb-4">🕒 Últimos registros</h3>
               <div className="space-y-2 max-h-72 overflow-y-auto">
@@ -518,7 +588,7 @@ export default function Gestion() {
 
       </div>
 
-      {/* ── Modal nuevo evento ── */}
+      {/* Modal nuevo evento */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
