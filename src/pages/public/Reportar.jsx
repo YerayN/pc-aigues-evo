@@ -40,73 +40,79 @@ export default function Reportar() {
     setCoordenadas(latlng)
   }
 
-async function handleSubmit(e) {
-  e.preventDefault()
-  
-  // Validación de ubicación: Exigimos texto O coordenadas en el mapa
-  if (!ubicacionTexto.trim() && !coordenadas) {
-    alert('Por favor, indica dónde está la incidencia: escribe una descripción de la ubicación o márcala en el mapa.')
-    return
-  }
+  async function handleSubmit(e) {
+    e.preventDefault()
+    
+    // Validación de ubicación: Exigimos texto O coordenadas en el mapa
+    if (!ubicacionTexto.trim() && !coordenadas) {
+      alert('Por favor, indica dónde está la incidencia: escribe una descripción de la ubicación o márcala en el mapa.')
+      return
+    }
 
-  setEnviando(true)
+    setEnviando(true)
 
-  try {
-    const textoUbicacionFinal = ubicacionTexto.trim() || '📍 Ubicación señalada únicamente en el mapa'
+    try {
+      const textoUbicacionFinal = ubicacionTexto.trim() || '📍 Ubicación señalada únicamente en el mapa'
 
-    // 1. Guardamos en tu tabla de Supabase para la intranet
-    const { error: supabaseError } = await supabase
-      .from('incidencias')
-      .insert([
-        {
-          nombre_ciudadano: nombre || 'Anónimo',
-          telefono_ciudadano: telefono,
-          tipo: tipoIncidencia,
-          ubicacion_texto: textoUbicacionFinal,
-          coordenadas: coordenadas ? `${coordenadas.lat},${coordenadas.lng}` : null,
-          descripcion: descripcion,
-          estado: 'Pendiente',
-          creado_el: new Date().toISOString()
-        }
-      ])
+      // 1. Guardamos en tu tabla de Supabase para la intranet
+      const { error: supabaseError } = await supabase
+        .from('incidencias')
+        .insert([
+          {
+            nombre_ciudadano: nombre || 'Anónimo',
+            telefono_ciudadano: telefono,
+            tipo: tipoIncidencia,
+            ubicacion_texto: textoUbicacionFinal,
+            coordenadas: coordenadas ? `${coordenadas.lat},${coordenadas.lng}` : null,
+            descripcion: descripcion,
+            estado: 'Pendiente',
+            creado_el: new Date().toISOString()
+          }
+        ])
 
-    if (supabaseError) throw supabaseError
+      if (supabaseError) throw supabaseError
 
-    // 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT
-    const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM' // Tu token real de la captura
-    const idGrupo = '-1003973593092' // Asegúrate de que este sea el ID de tu grupo (con el menos delante)
+      // 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT (Formato corregido con comillas invertidas)
+      const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM'
+      const idGrupo = '-1003973593092'
 
-    // Texto limpio sin asteriscos de Markdown para evitar que Telegram se atragante con los caracteres
-    const mensajeTelegram = `🚨 REPORTE CIUDADANO ENVIADO 🚨\n\n` +
-                            `🗂️ Tipo: ${tipoIncidencia}\n` +
-                            `📍 Ubicación: ${textoUbicacionFinal}\n` +
-                            `📝 Detalles: ${descripcion}\n` +
-                            `👤 Informante: ${nombre || 'Anónimo'}\n` +
-                            `📞 Teléfono: ${telefono}`;
+      // Usamos comillas invertidas dando los saltos de línea con el Enter del teclado.
+      // Así evitamos los conflictos de escape que daban el Error 400.
+      const mensajeTelegram = `🚨 REPORTE CIUDADANO ENVIADO 🚨
 
-    // Hacemos la llamada HTTP directa a Telegram
-    await fetch(`https://api.telegram.org/bot${tokenBot}/sendMessage`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        chat_id: idGrupo,
-        text: mensajeTelegram
-        // Quitamos parse_mode para que no de error 400 con caracteres raros
+🗂️ Tipo: ${tipoIncidencia}
+📍 Ubicación: ${textoUbicacionFinal}
+📝 Detalles: ${descripcion}
+👤 Informante: ${nombre || 'Anónimo'}
+📞 Teléfono: ${telefono}`
+
+      // Hacemos la llamada HTTP directa a Telegram
+      const respuestaTelegram = await fetch(`https://api.telegram.org/bot${tokenBot}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          chat_id: idGrupo,
+          text: mensajeTelegram
+        })
       })
-    })
 
-    // Si todo ha ido bien, marcamos éxito
-    setEnviadoExito(true)
+      if (!respuestaTelegram.ok) {
+        const datosError = await respuestaTelegram.json()
+        throw new Error(`Telegram respondió con error: ${datosError.description}`)
+      }
 
-  } catch (error) {
-    console.error('Error en el proceso:', error)
-    alert('Hubo un problema al enviar el reporte. Por favor, inténtalo de nuevo.')
-  } finally {
-    setEnviando(false)
+      // Si todo ha ido bien, marcamos éxito
+      setEnviadoExito(true)
+
+    } catch (error) {
+      console.error('Error en el proceso:', error)
+      alert('Hubo un problema al enviar el reporte. Por favor, inténtalo de nuevo.')
+    } finally {
+      setEnviando(false)
+    }
   }
-}
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
