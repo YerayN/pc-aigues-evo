@@ -448,7 +448,22 @@ export default function Gestion() {
                     <div className="pt-1 text-[10px] text-gray-400 flex flex-col gap-0.5 border-t border-gray-50">
                       <p>👤 <strong>Informante:</strong> {inc.nombre_ciudadano}</p>
                       <p>📞 <strong>Teléfono:</strong> <a href={`tel:${inc.telefono_ciudadano}`} className="text-blue-600 underline font-semibold">{inc.telefono_ciudadano}</a></p>
-                      {inc.coordenadas && <p>🌐 <strong>Coordenadas:</strong> {inc.coordenadas}</p>}
+                      
+                      {/* BOTÓN GOOGLE MAPS EN LA INTRANET */}
+                      {inc.coordenadas ? (
+                        <div className="pt-1EDA">
+                          <a 
+                            href={`https://www.google.com/maps?q=${inc.coordenadas}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md font-bold hover:bg-blue-100 transition text-[10px]"
+                          >
+                            🗺️ Ver en Google Maps
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-gray-400 italic pt-1">📍 No se marcaron coordenadas en el mapa</p>
+                      )}
                     </div>
                     <div className="grid grid-cols-3 gap-1.5 pt-2">
                       <button onClick={() => transformarEnServicio(inc)} className="bg-pc-orange text-white py-1.5 rounded-lg font-bold hover:bg-orange-600 transition text-[10px]">🚨 Activar</button>

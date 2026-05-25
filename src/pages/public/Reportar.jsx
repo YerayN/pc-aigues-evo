@@ -92,6 +92,7 @@ export default function Reportar() {
 
     // 2. SI EL VECINO USÓ EL MAPA: Le acoplamos el enlace directo a Google Maps
     if (coordenadas) {
+      // URL oficial y limpia para Google Maps usando las coordenadas reales
       const urlMaps = `https://www.google.com/maps?q=${coordenadas.lat},${coordenadas.lng}`
       mensajeTelegram += `\n\n🗺️ *Mapa:* [Ver ubicación exacta en Google Maps](${urlMaps})`
     }
