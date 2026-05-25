@@ -73,16 +73,16 @@ async function handleSubmit(e) {
     if (supabaseError) throw supabaseError
 
     // 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT
-    const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM' // Pon aquí el token de tu bot (ej: 5112036215:AA...)
-    const idGrupo = '-5112036215' // Pon aquí el ID de tu grupo de Telegram (con el menos delante)
+    const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM' // Tu token real de la captura
+    const idGrupo = '-5112036215' // Asegúrate de que este sea el ID de tu grupo (con el menos delante)
 
-    // Preparamos el texto limpio con saltos de línea normales
-    const mensajeTelegram = `🚨 *NUEVO REPORTE CIUDADANO* 🚨\n\n` +
-                            `🗂️ *Tipo:* ${tipoIncidencia}\n` +
-                            `📍 *Ubicación:* ${textoUbicacionFinal}\n` +
-                            `📝 *Detalles:* ${descripcion}\n` +
-                            `👤 *Informante:* ${nombre || 'Anónimo'}\n` +
-                            `📞 *Teléfono:* ${telefono}`;
+    // Texto limpio sin asteriscos de Markdown para evitar que Telegram se atragante con los caracteres
+    const mensajeTelegram = `🚨 REPORTE CIUDADANO ENVIADO 🚨\n\n` +
+                            `🗂️ Tipo: ${tipoIncidencia}\n` +
+                            `📍 Ubicación: ${textoUbicacionFinal}\n` +
+                            `📝 Detalles: ${descripcion}\n` +
+                            `👤 Informante: ${nombre || 'Anónimo'}\n` +
+                            `📞 Teléfono: ${telefono}`;
 
     // Hacemos la llamada HTTP directa a Telegram
     await fetch(`https://api.telegram.org/bot${tokenBot}/sendMessage`, {
@@ -92,8 +92,8 @@ async function handleSubmit(e) {
       },
       body: JSON.stringify({
         chat_id: idGrupo,
-        text: mensajeTelegram,
-        parse_mode: 'Markdown'
+        text: mensajeTelegram
+        // Quitamos parse_mode para que no de error 400 con caracteres raros
       })
     })
 
