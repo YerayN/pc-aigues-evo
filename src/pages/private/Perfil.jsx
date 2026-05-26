@@ -7,6 +7,31 @@ import Swal from 'sweetalert2'
 
 const ROL_LABEL = { admin: 'Administrador del Sistema', jefe: 'Jefe de Agrupación', voluntario: 'Voluntario' }
 
+// ¡AQUÍ ESTÁ LA MAGIA! Hemos sacado el componente Field fuera de la función principal Perfil
+const Field = ({ label, icon, value, onChange, readOnly = false, mono = false, type = "text", placeholder = "" }) => (
+  <div>
+    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">{icon}</span>
+      <input
+        type={type} 
+        value={value}
+        placeholder={placeholder}
+        onChange={onChange ? e => onChange(e.target.value) : undefined}
+        readOnly={readOnly}
+        className={`w-full pl-10 pr-10 py-3 rounded-xl border text-sm transition outline-none
+          ${readOnly
+            ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
+            : 'bg-white border-gray-200 text-gray-800 focus:ring-2 focus:ring-pc-orange focus:border-transparent'
+          } ${mono ? 'font-mono' : ''}`}
+      />
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm">
+        {readOnly ? '🔒' : '✏️'}
+      </span>
+    </div>
+  </div>
+)
+
 export default function Perfil() {
   const { perfil: perfilCtx, rol } = useAuth()
   
@@ -43,7 +68,6 @@ export default function Perfil() {
 
   // Función para cambiar la contraseña en la autenticación de Supabase
   async function guardarPassword() {
-    // Validaciones básicas
     if (!passwords.nueva || !passwords.confirmar) {
       Swal.fire({ icon: 'warning', title: 'Campos vacíos', text: 'Por favor, rellena ambas contraseñas.' })
       return
@@ -58,42 +82,16 @@ export default function Perfil() {
     }
 
     setLoadingPass(true)
-    // Supabase permite a un usuario logueado cambiar su propia contraseña así de fácil:
     const { error } = await supabase.auth.updateUser({ password: passwords.nueva })
     setLoadingPass(false)
 
     if (!error) {
-      setPasswords({ nueva: '', confirmar: '' }) // Limpiamos los campos
+      setPasswords({ nueva: '', confirmar: '' })
       Swal.fire({ icon: 'success', title: '¡Contraseña cambiada!', text: 'Tu nueva contraseña ya está activa.', confirmButtonColor: '#003366' })
     } else {
       Swal.fire('Error al cambiar contraseña', error.message, 'error')
     }
   }
-
-  // Componente reutilizable para los inputs (ahora soporta tipo password)
-  const Field = ({ label, icon, value, onChange, readOnly = false, mono = false, type = "text", placeholder = "" }) => (
-    <div>
-      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">{icon}</span>
-        <input
-          type={type} 
-          value={value}
-          placeholder={placeholder}
-          onChange={onChange ? e => onChange(e.target.value) : undefined}
-          readOnly={readOnly}
-          className={`w-full pl-10 pr-10 py-3 rounded-xl border text-sm transition outline-none
-            ${readOnly
-              ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed'
-              : 'bg-white border-gray-200 text-gray-800 focus:ring-2 focus:ring-pc-orange focus:border-transparent'
-            } ${mono ? 'font-mono' : ''}`}
-        />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm">
-          {readOnly ? '🔒' : '✏️'}
-        </span>
-      </div>
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
@@ -102,7 +100,6 @@ export default function Perfil() {
         
         {/* BLOQUE 1: DATOS PERSONALES */}
         <div className="bg-white rounded-2xl shadow-pc overflow-hidden border border-gray-100">
-          {/* Header */}
           <div className="bg-gradient-to-br from-pc-blue to-blue-800 p-8 text-center relative overflow-hidden">
             <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:20px_20px]" />
             <div className="relative z-10">
