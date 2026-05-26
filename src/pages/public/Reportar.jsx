@@ -52,7 +52,7 @@ export default function Reportar() {
     setEnviando(true)
 
     try {
-      const textoUbicacionFinal = ubicacionTexto.trim() || '📍 Ubicación señalada únicamente en el mapa'
+      const textoUbicacionFinal = ubicacionTexto.trim() || 'Ubicación señalada en el mapa'
 
       // 1. Guardamos en tu tabla de Supabase para la intranet
       const { error: supabaseError } = await supabase
@@ -83,7 +83,7 @@ export default function Reportar() {
     }
 
     // 1. Montamos la base del mensaje limpio
-    let mensajeTelegram = `🚨 *NUEVO REPORTE CIUDADANO* 🚨\n\n` +
+    let mensajeTelegram = `🚨 *REPORTE CIUDADANO* 🚨\n\n` +
                           `🗂️ *Tipo:* ${limpiarMarkdown(tipoIncidencia)}\n` +
                           `📍 *Ubicación:* ${limpiarMarkdown(textoUbicacionFinal)}\n` +
                           `📝 *Detalles:* ${limpiarMarkdown(descripcion)}\n` +
