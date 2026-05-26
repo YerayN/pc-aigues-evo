@@ -73,7 +73,7 @@ export default function Reportar() {
       if (supabaseError) throw supabaseError
 
 // 2. ENVÍO DIRECTO A TELEGRAM VÍA JAVASCRIPT (Con enlace opcional a Google Maps)
-    const tokenBot = '7917152160:AAF2XdahnhSyDXwFXjAnhJBNbwFAYsx5NzM'
+    const tokenBot = import.meta.env.VITE_TELEGRAM_TOKEN
     const idGrupo = '-1003973593092'
 
     // Función rápida para limpiar textos y que el Markdown de Telegram no se rompa con caracteres especiales
