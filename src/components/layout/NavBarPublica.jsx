@@ -11,7 +11,7 @@ const COLORES_ALERTA = {
 }
 
 const ICONOS_ALERTA = {
-  verde: '✅', azul: '📣', amarillo: '⚠️', naranja: '⚠️', rojo: '🚨'
+  verde: '🟦', azul: '🟩', amarillo: '🟥', naranja: '⬛️', rojo: '⬛️'
 }
 
 // Scroll suave a una sección de la Home
