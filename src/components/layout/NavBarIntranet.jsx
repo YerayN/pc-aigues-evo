@@ -17,7 +17,7 @@ export default function NavBarIntranet() {
   }
 
   const COLORES_TABLON = {
-    info:    'bg-pc-blue text-white',
+    info:    '#279CF5 text-white',
     aviso:   'bg-yellow-400 text-gray-900',
     urgente: 'bg-red-600 text-white animate-pulse',
   }
@@ -26,7 +26,7 @@ export default function NavBarIntranet() {
     <>
       {anuncio?.mensaje && (
         <div className={`w-full py-2 px-4 text-center text-sm font-bold ${COLORES_TABLON[anuncio.tipo] ?? 'bg-pc-blue text-white'} transition-all`}>
-          {anuncio.tipo === 'urgente' ? '🚨' : anuncio.tipo === 'aviso' ? '🔔' : '📢'} {anuncio.mensaje}
+          {anuncio.tipo === 'urgente' ? '⚫️' : anuncio.tipo === 'aviso' ? '🔴' : '🟢'} {anuncio.mensaje}
         </div>
       )}
 
