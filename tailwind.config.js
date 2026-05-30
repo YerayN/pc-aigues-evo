@@ -6,13 +6,13 @@ export default {
       colors: {
         // Paleta oficial Protección Civil
         pc: {
-          orange: '#FF6600',
-          'orange-dark': '#CC5200',
-          'orange-light': '#FF8533',
-          blue: '#003366',
-          'blue-dark': '#002244',
-          'blue-light': '#0055AA',
-          'blue-muted': '#1a4a7a',
+          orange: '#fe481f',          // Tu nuevo naranja base (más vivo y de emergencia)
+          'orange-dark': '#c9310e',   // Un tono más tostado para los efectos :hover de los botones
+          'orange-light': '#ff6e4a',  // Un naranja más suave para alertas o detalles pequeños
+          blue: '#1f2b5f',            // Tu nuevo azul base (marino profundo corporativo)
+          'blue-dark': '#11193c',     // Azul noche muy oscuro para textos principales o fondos de tarjetas
+          'blue-light': '#364993',    // Un azul más claro y eléctrico para destacar cosas sueltas
+          'blue-muted': '#3c4b7d',
         }
       },
       fontFamily: {

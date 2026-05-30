@@ -11,7 +11,7 @@ L.Icon.Default.mergeOptions({
 })
 
 const COLOR_LEAFLET = { azul: 'blue', rojo: 'red', verde: 'green', naranja: 'orange', amarillo: 'gold' }
-const COLOR_HEX     = { rojo: '#e11d48', azul: '#1f2b5f', verde: '#16a34a', naranja: '#fe481f', amarillo: '#ca8a04' }
+const COLOR_HEX     = { rojo: '#e11d48', azul: '#2563eb', verde: '#16a34a', naranja: '#ea580c', amarillo: '#ca8a04' }
 
 function crearIcono(color) {
   return new L.Icon({
