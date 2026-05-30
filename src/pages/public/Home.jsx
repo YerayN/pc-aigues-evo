@@ -37,6 +37,7 @@ export default function Home() {
   const [tiempo, setTiempo]   = useState(null)
   const [form, setForm]       = useState({ nombre: '', apellidos: '', tel: '', email: '', msg: '' })
   const [enviado, setEnviado] = useState(false)
+  const [enviando, setEnviando] = useState(false) // Nuevo estado para controlar el botón mientras se envía
 
   useEffect(() => {
     fetch('https://api.open-meteo.com/v1/forecast?latitude=38.495&longitude=-0.362&current_weather=true')
@@ -49,9 +50,53 @@ export default function Home() {
       .catch(() => {})
   }, [])
 
-  function handleForm(e) {
+  async function handleForm(e) {
     e.preventDefault()
-    setEnviado(true)
+    setEnviando(true)
+
+    try {
+      const tokenBot = import.meta.env.VITE_TELEGRAM_TOKEN
+      const idGrupo = '-1003973593092' // Usamos el mismo ID de grupo de jefatura
+
+      // Limpiamos caracteres conflictivos para no romper el formato Markdown
+      const limpiarMarkdown = (texto) => {
+        if (!texto) return ''
+        return texto.replace(/[*_`[\]()]/g, '')
+      }
+
+      // Montamos el mensaje para que quede visualmente limpio en Telegram
+      const mensajeTelegram = `🙋‍♂️ *NUEVA SOLICITUD DE VOLUNTARIADO* 🙋‍♀️\n\n` +
+                              `👤 *Nombre:* ${limpiarMarkdown(form.nombre)} ${limpiarMarkdown(form.apellidos)}\n` +
+                              `📞 *Teléfono:* ${limpiarMarkdown(form.tel)}\n` +
+                              `📧 *Email:* ${limpiarMarkdown(form.email)}\n` +
+                              `💬 *Mensaje:* ${limpiarMarkdown(form.msg) || 'Sin mensaje adicional'}`
+
+      const respuestaTelegram = await fetch(`https://api.telegram.org/bot${tokenBot}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          chat_id: idGrupo,
+          text: mensajeTelegram,
+          parse_mode: 'Markdown'
+        })
+      })
+
+      if (!respuestaTelegram.ok) {
+        throw new Error('Fallo al conectar con Telegram')
+      }
+
+      setEnviado(true)
+      // Vaciamos el formulario por si acaso
+      setForm({ nombre: '', apellidos: '', tel: '', email: '', msg: '' })
+
+    } catch (error) {
+      console.error('Error enviando la solicitud:', error)
+      alert('Hubo un problema al enviar la solicitud. Por favor, inténtalo más tarde.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -284,6 +329,12 @@ export default function Home() {
                     <p className="text-gray-500 text-sm">
                       Hemos recibido tu solicitud. Nos pondremos en contacto contigo pronto.
                     </p>
+                    <button 
+                      onClick={() => setEnviado(false)}
+                      className="mt-6 text-pc-blue hover:underline text-sm font-bold"
+                    >
+                      Enviar otra solicitud
+                    </button>
                   </div>
                 ) : (
                   <form onSubmit={handleForm} className="space-y-4">
@@ -330,10 +381,13 @@ export default function Home() {
                       />
                     </div>
 
-                    <button type="submit"
-                      className="w-full bg-pc-orange hover:bg-pc-orange-dark text-white font-bold
-                                 py-4 rounded-xl shadow-orange transition-all active:scale-95 text-sm">
-                      Enviar solicitud →
+                    <button 
+                      type="submit"
+                      disabled={enviando}
+                      className="w-full bg-pc-orange hover:bg-pc-orange-dark disabled:bg-orange-300 text-white font-bold
+                                 py-4 rounded-xl shadow-orange transition-all active:scale-95 text-sm"
+                    >
+                      {enviando ? '⏳ Enviando solicitud...' : 'Enviar solicitud →'}
                     </button>
                   </form>
                 )}
@@ -350,10 +404,23 @@ export default function Home() {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
 
-            {/* Derechos */}
-            <p className="text-blue-200 text-xs text-center sm:text-left">
-              © 2026 Protección Civil Aigües · Todos los derechos reservados.
-            </p>
+            {/* Derechos + Tu Firma Sutil */}
+            <div className="text-center sm:text-left space-y-1">
+              <p className="text-blue-200 text-xs">
+                © 2026 Protección Civil Aigües · Todos los derechos reservados.
+              </p>
+              <p className="text-blue-300/60 text-[11px]">
+                Desarrollado por{' '}
+                <a 
+                  href="https://www.yeraynavarro.com/" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="hover:text-pc-orange underline transition-colors duration-200"
+                >
+                  Yeray Navarro
+                </a>
+              </p>
+            </div>
 
             {/* Redes sociales */}
             <div className="flex items-center gap-3">
