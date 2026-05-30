@@ -17,7 +17,7 @@ export default function NavBarIntranet() {
   }
 
   const COLORES_TABLON = {
-    info:    '#279CF5 text-white',
+    info:    'bg-[#279CF5] text-white',
     aviso:   'bg-yellow-400 text-gray-900',
     urgente: 'bg-red-600 text-white animate-pulse',
   }
