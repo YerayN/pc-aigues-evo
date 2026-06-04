@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAlertaPublica } from '../../hooks/useSupabase'
 
-const COLORES_ALERTA = {
-  verde:    'bg-green-600 text-white',
-  azul:     'bg-blue-700 text-white',
-  amarillo: 'bg-yellow-400 text-gray-900',
-  naranja:  'bg-orange-500 text-white',
-  rojo:     'bg-red-600 text-white animate-pulse',
+// 🎨 NUEVOS ESTILOS DE ALTO IMPACTO (Degradados y bordes gruesos)
+const ESTILOS_ALERTA = {
+  verde:    'bg-gradient-to-r from-green-500 to-green-600 text-white border-b-4 border-green-700',
+  azul:     'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-b-4 border-blue-900',
+  amarillo: 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 border-b-4 border-yellow-600',
+  naranja:  'bg-gradient-to-r from-orange-500 to-orange-600 text-white border-b-4 border-orange-700',
+  rojo:     'bg-gradient-to-r from-red-600 to-red-700 text-white border-b-4 border-red-900',
 }
 
 // Scroll suave a una sección de la Home
@@ -30,24 +31,49 @@ export default function NavBarPublica() {
   const navigate = useNavigate()
 
   const claseAlerta = alerta?.activa
-    ? (COLORES_ALERTA[alerta.color] ?? 'bg-gray-600 text-white')
+    ? (ESTILOS_ALERTA[alerta.color] ?? ESTILOS_ALERTA.azul)
     : null
 
   const cerrar = () => setMenuAbierto(false)
 
   return (
     <>
-      {/* Barra de alerta pública (Supabase Realtime) */}
+      {/* 🚨 NUEVO PANEL DE ALERTA DE ALTO IMPACTO 🚨 */}
       {alerta?.activa && (
-        <div className={`w-full py-2.5 px-4 text-center text-sm font-bold ${claseAlerta} transition-all duration-500`}>
-          {alerta.icono || '📢'}&nbsp;&nbsp;{alerta.mensaje}
+        <div className={`w-full shadow-lg relative z-50 overflow-hidden ${claseAlerta} ${alerta.color === 'rojo' ? 'animate-pulse' : ''}`}>
+          
+          {/* Patrón de rayas diagonales semitransparente (estilo emergencia) */}
+          <div 
+            className="absolute inset-0 opacity-10 pointer-events-none" 
+            style={{ backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 10px, #000 10px, #000 20px)' }}
+          />
+          
+          <div className="container mx-auto px-4 py-3 md:py-4 relative z-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 text-center sm:text-left">
+            
+            {/* Icono gigante */}
+            <div className="text-4xl md:text-5xl drop-shadow-md pb-1 sm:pb-0 shrink-0">
+              {alerta.icono || '📢'}
+            </div>
+            
+            {/* Textos */}
+            <div className="flex flex-col justify-center max-w-4xl">
+              <span className="text-[10px] md:text-xs font-black uppercase tracking-widest opacity-80 mb-0.5">
+                Aviso Oficial · Protección Civil
+              </span>
+              <span className="text-sm md:text-lg font-bold leading-tight drop-shadow-sm">
+                {alerta.mensaje}
+              </span>
+            </div>
+            
+          </div>
         </div>
       )}
 
-      <nav className="bg-pc-blue text-white shadow-md sticky top-0 z-50">
+      {/* ── BARRA DE NAVEGACIÓN NORMAL ── */}
+      <nav className="bg-pc-blue text-white shadow-md sticky top-0 z-40">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center gap-4">
 
-          {/* ── Logo ── */}
+          {/* Logo */}
           <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition shrink-0">
             <div className="w-12 h-12 rounded-full bg-white p-0.5 flex items-center justify-center shadow-md shrink-0">
               <img
@@ -62,7 +88,7 @@ export default function NavBarPublica() {
             </div>
           </Link>
 
-          {/* ── Desktop nav ── */}
+          {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-1 text-sm font-medium">
             <button
               onClick={() => scrollToSection('mapa', navigate, cerrar)}
@@ -90,7 +116,7 @@ export default function NavBarPublica() {
             </Link>
           </div>
 
-          {/* ── Hamburger móvil ── */}
+          {/* Hamburger móvil */}
           <button
             className="md:hidden p-2 rounded-lg hover:bg-white/10 transition"
             onClick={() => setMenuAbierto(!menuAbierto)}
@@ -105,7 +131,7 @@ export default function NavBarPublica() {
           </button>
         </div>
 
-        {/* ── Menú móvil desplegable ── */}
+        {/* Menú móvil desplegable */}
         {menuAbierto && (
           <div className="md:hidden border-t border-white/10 bg-pc-blue">
             <button
