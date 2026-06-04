@@ -14,7 +14,6 @@ import { ACTIVIDADES } from '../../constants/actividades'
 const COLOR_HEX = { rojo: '#e11d48', azul: '#2563eb', verde: '#16a34a', naranja: '#ea580c' }
 const COLOR_ACT = Object.fromEntries(ACTIVIDADES.map(a => [a.value, a.color]))
 
-// 1. KPI Ajustado para móviles: menos padding, texto más pequeño y adaptable
 function KPI({ valor, label, sub, color = 'text-pc-blue', icon }) {
   return (
     <div className="bg-white rounded-2xl p-3 md:p-5 shadow-pc border border-gray-100 flex items-center gap-2 md:gap-4">
@@ -178,7 +177,8 @@ export default function Gestion() {
   const [nuevoEvento, setNuevoEvento] = useState({ titulo: '', fecha: '', hora: '', descripcion: '' })
 
   const [anuncio,       setAnuncio]       = useState({ mensaje: '', tipo: 'info' })
-  const [alertaPublica, setAlertaPublica] = useState({ mensaje: '', color: 'verde' })
+  // Le añadimos el campo icono al estado inicial
+  const [alertaPublica, setAlertaPublica] = useState({ mensaje: '', color: 'verde', icono: '📢' })
   const [guardandoAnuncio, setGuardandoAnuncio] = useState(false)
   const [guardandoAlerta,  setGuardandoAlerta]  = useState(false)
 
@@ -186,7 +186,7 @@ export default function Gestion() {
     setLoading(true)
     const [{ data: svcs }, { data: incs }, { data: users }, { data: regs }, { data: anun }, { data: alert }] = await Promise.all([
       supabase.from('servicios').select('*'),
-      supabase.from('incidencias').select('*').order('creado_el', { ascending: false }), // Traemos TODAS las incidencias
+      supabase.from('incidencias').select('*').order('creado_el', { ascending: false }),
       supabase.from('perfiles').select('nombre, rol').order('nombre'),
       supabase.from('registro_horas').select('*').not('salida', 'is', null).order('salida', { ascending: false }),
       supabase.from('anuncios').select('*').eq('id', 1).maybeSingle(),
@@ -195,7 +195,6 @@ export default function Gestion() {
     const sorted = (svcs ?? []).sort((a, b) => new Date(`${a.fecha}T${a.hora}`) - new Date(`${b.fecha}T${b.hora}`))
     setServicios(sorted)
     
-    // Filtramos las incidencias por su estado
     if (incs) {
       setIncidenciasPendientes(incs.filter(i => i.estado === 'Pendiente'))
       setIncidenciasArchivadas(incs.filter(i => i.estado === 'Archivada' || i.estado === 'Resuelta'))
@@ -204,25 +203,22 @@ export default function Gestion() {
     setUsuarios(users ?? [])
     setRegistros(regs ?? [])
     if (anun)  setAnuncio({ mensaje: anun.mensaje ?? '', tipo: anun.tipo ?? 'info' })
-    if (alert) setAlertaPublica({ mensaje: alert.mensaje ?? '', color: alert.color ?? 'verde' })
+    // Leemos el icono de la base de datos (y si no hay, ponemos el altavoz por defecto)
+    if (alert) setAlertaPublica({ mensaje: alert.mensaje ?? '', color: alert.color ?? 'verde', icono: alert.icono ?? '📢' })
     setLoading(false)
   }, [])
 
   useEffect(() => { 
     cargarTodo() 
-
-    // Escuchador en tiempo real
     const channel = supabase
       .channel('realtime-incidencias-gestion')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidencias' }, () => {
-        cargarTodo() // Recargamos si hay cambios
+        cargarTodo()
       })
       .subscribe()
-
     return () => { supabase.removeChannel(channel) }
   }, [cargarTodo])
 
-  // ── Datos estadísticas ──
   const completados = useMemo(() => registros.filter(r => r.salida), [registros])
 
   const ranking = useMemo(() => {
@@ -261,7 +257,6 @@ export default function Gestion() {
   const futuros = servicios.filter(s => new Date(s.fecha) >= hoy)
   const pasados = servicios.filter(s => new Date(s.fecha) <  hoy).reverse()
 
-  // ── Acciones de Servicios ──
   async function crearEvento(e) {
     e.preventDefault()
     const { error } = await supabase.from('servicios').insert([{ ...nuevoEvento, equipo: [], candidatos: [] }])
@@ -279,8 +274,6 @@ export default function Gestion() {
     await supabase.from('servicios').delete().eq('id', id)
     cargarTodo()
   }
-
-  // ── Acciones de Incidencias ──
 
   async function cambiarEstadoIncidencia(id, nuevoEstado) {
     const { error } = await supabase.from('incidencias').update({ estado: nuevoEstado }).eq('id', id)
@@ -311,16 +304,11 @@ export default function Gestion() {
   }
 
   function compartirWhatsApp(inc) {
-    // Montamos la URL de Google Maps si existe
     const enlaceMapa = inc.coordenadas ? `%0A🗺️ *Mapa:* https://www.google.com/maps?q=${inc.coordenadas}` : ''
-    // Texto formateado para WhatsApp (sin datos personales del informante)
     const texto = `⚠️ *AVISO CIUDADANO* ⚠️%0A%0A🗂️ *Tipo:* ${inc.tipo}%0A📍 *Ubicación:* ${inc.ubicacion_texto}%0A📝 *Detalles:* ${inc.descripcion}${enlaceMapa}`
-    
-    // Abre la app de WhatsApp
     window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank')
   }
 
-  // ── Anuncios y Alertas ──
   async function publicarAnuncio(e) {
     e.preventDefault()
     setGuardandoAnuncio(true)
@@ -334,8 +322,9 @@ export default function Gestion() {
   async function publicarAlerta(e) {
     e.preventDefault()
     setGuardandoAlerta(true)
+    // Ahora guardamos también el icono en la base de datos
     const { error } = await supabase.from('alerta_publica')
-      .upsert({ id: 1, mensaje: alertaPublica.mensaje, color: alertaPublica.color, activa: true, created_at: new Date() })
+      .upsert({ id: 1, mensaje: alertaPublica.mensaje, color: alertaPublica.color, icono: alertaPublica.icono, activa: true, created_at: new Date() })
     setGuardandoAlerta(false)
     if (error) Swal.fire('Error', error.message, 'error')
     else Swal.fire({ icon: 'success', title: '✅ Web pública actualizada', text: 'El aviso ya es visible para los vecinos.', confirmButtonColor: '#003366' })
@@ -410,22 +399,43 @@ export default function Gestion() {
           <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
             <h3 className="font-bold text-red-900 text-sm mb-0.5 flex items-center gap-2">🚨 Alerta Población</h3>
             <p className="text-xs text-red-400 mb-3">Visible en la <strong>web pública</strong> para los vecinos</p>
-            <form onSubmit={publicarAlerta} className="flex flex-col sm:flex-row gap-2">
-              <select value={alertaPublica.color} onChange={e => setAlertaPublica(a => ({ ...a, color: e.target.value }))}
-                className="w-full sm:w-36 px-3 py-2 border border-red-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
-                <option value="verde">🟢 Verde</option>
-                <option value="azul">🔵 Azul</option>
-                <option value="amarillo">🟡 Amarillo</option>
-                <option value="naranja">🟠 Naranja</option>
-                <option value="rojo">🔴 Rojo</option>
-              </select>
-              <input type="text" required value={alertaPublica.mensaje}
-                onChange={e => setAlertaPublica(a => ({ ...a, mensaje: e.target.value }))}
-                placeholder="Ej: Situación de normalidad..."
-                className="flex-1 px-3 py-2 border border-red-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
-              <Button type="submit" loading={guardandoAlerta} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white whitespace-nowrap text-sm px-4">
-                Actualizar
-              </Button>
+            <form onSubmit={publicarAlerta} className="flex flex-col gap-2">
+              
+              <div className="flex flex-col sm:flex-row gap-2">
+                {/* Desplegable de Iconos */}
+                <select value={alertaPublica.icono} onChange={e => setAlertaPublica(a => ({ ...a, icono: e.target.value }))}
+                  className="w-full sm:w-auto px-3 py-2 border border-red-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
+                  <option value="📢">📢 Info</option>
+                  <option value="⚠️">⚠️ Atención</option>
+                  <option value="🌡️">🌡️ Calor</option>
+                  <option value="❄️">❄️ Frío / Nieve</option>
+                  <option value="🌧️">🌧️ Lluvia</option>
+                  <option value="🔥">🔥 Incendio</option>
+                  <option value="🚧">🚧 Obras / Corte</option>
+                  <option value="🌪️">🌪️ Viento</option>
+                </select>
+
+                {/* Desplegable de Colores */}
+                <select value={alertaPublica.color} onChange={e => setAlertaPublica(a => ({ ...a, color: e.target.value }))}
+                  className="w-full sm:w-36 px-3 py-2 border border-red-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
+                  <option value="verde">🟢 Verde</option>
+                  <option value="azul">🔵 Azul</option>
+                  <option value="amarillo">🟡 Amarillo</option>
+                  <option value="naranja">🟠 Naranja</option>
+                  <option value="rojo">🔴 Rojo</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input type="text" required value={alertaPublica.mensaje}
+                  onChange={e => setAlertaPublica(a => ({ ...a, mensaje: e.target.value }))}
+                  placeholder="Ej: Situación de normalidad..."
+                  className="flex-1 px-3 py-2 border border-red-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+                <Button type="submit" loading={guardandoAlerta} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white whitespace-nowrap text-sm px-4">
+                  Actualizar
+                </Button>
+              </div>
+
             </form>
           </div>
         </div>
@@ -659,7 +669,6 @@ export default function Gestion() {
                       <p className="text-gray-500">{inc.descripcion}</p>
                       <div className="pt-2 mt-2 border-t border-gray-100 text-[10px] flex justify-between items-center">
                         <span className="text-gray-400">👤 {inc.nombre_ciudadano}</span>
-                        {/* Botón para borrar definitivamente incluso desde el historial */}
                         <button onClick={() => borrarIncidencia(inc.id)} className="text-red-400 hover:text-red-600 transition font-bold">
                           Eliminar
                         </button>

@@ -10,21 +10,13 @@ const COLORES_ALERTA = {
   rojo:     'bg-red-600 text-white animate-pulse',
 }
 
-const ICONOS_ALERTA = {
-  verde: '🟦', azul: '🟩', amarillo: '🟥', naranja: '⬛️', rojo: '⬛️'
-}
-
 // Scroll suave a una sección de la Home
-// React Router con HashRouter no hace scroll nativo a #anclas,
-// usamos scrollIntoView explícitamente
 function scrollToSection(id, navigate, cerrarMenu) {
   cerrarMenu?.()
-  // Si ya estamos en '/', scroll directo
   if (window.location.pathname === '/') {
     const el = document.getElementById(id)
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   } else {
-    // Navegamos a '/' y después del render hacemos scroll
     navigate('/')
     setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -48,7 +40,7 @@ export default function NavBarPublica() {
       {/* Barra de alerta pública (Supabase Realtime) */}
       {alerta?.activa && (
         <div className={`w-full py-2.5 px-4 text-center text-sm font-bold ${claseAlerta} transition-all duration-500`}>
-          {ICONOS_ALERTA[alerta.color] ?? '📢'}&nbsp;&nbsp;{alerta.mensaje}
+          {alerta.icono || '📢'}&nbsp;&nbsp;{alerta.mensaje}
         </div>
       )}
 
