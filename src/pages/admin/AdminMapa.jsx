@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import NavBarIntranet from '../../components/layout/NavBarIntranet'
 import { supabase } from '../../lib/supabase'
-import { Button, Badge, LoadingPage } from '../../components/ui'
+import { Button, Badge } from '../../components/ui'
 import Swal from 'sweetalert2'
 
 delete L.Icon.Default.prototype._getIconUrl
@@ -13,9 +13,15 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
+// Creamos un icono limpio y estático para los puntos intermedios y evitamos fallos
+const iconPuntoIntermedio = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6]
+})
+
 const COLOR_HEX = { rojo: '#e11d48', azul: '#2563eb', verde: '#16a34a', naranja: '#ea580c' }
 
-// Componente que escucha clicks del mapa y llama onClic
 function MapClickHandler({ onClic }) {
   useMapEvents({ click: e => onClic(e.latlng) })
   return null
@@ -38,7 +44,7 @@ function estadoElemento(el) {
 export default function AdminMapa() {
   const [modo,       setModo]       = useState('punto')
   const [puntos,     setPuntos]     = useState([])
-  const [puntoClic,  setPuntoClic]  = useState(null)   // para modo punto
+  const [puntoClic,  setPuntoClic]  = useState(null)
   const [elementos,  setElementos]  = useState([])
   const [loading,    setLoading]    = useState(false)
 
@@ -82,8 +88,14 @@ export default function AdminMapa() {
       Swal.fire({ icon: 'warning', title: '¡Falta el punto!', text: 'Toca en el mapa donde quieras colocar el aviso.' })
       return
     }
-    if (modo !== 'punto' && puntos.length < 2) {
-      Swal.fire({ icon: 'warning', title: '¡Dibuja en el mapa!', text: modo === 'linea' ? 'Necesitas al menos 2 puntos para una línea.' : 'Necesitas al menos 3 puntos para una zona.' })
+    
+    // Validaciones separadas para que nadie guarde áreas rotas de 2 puntos
+    if (modo === 'linea' && puntos.length < 2) {
+      Swal.fire({ icon: 'warning', title: 'Faltan puntos', text: 'Necesitas dibujar al menos 2 puntos para un corte de vía.' })
+      return
+    }
+    if (modo === 'zona' && puntos.length < 3) {
+      Swal.fire({ icon: 'warning', title: 'Faltan puntos', text: 'Necesitas dibujar al menos 3 puntos para cerrar un área.' })
       return
     }
 
@@ -142,10 +154,9 @@ export default function AdminMapa() {
             {modo === 'linea' && puntos.length > 1 && <Polyline positions={puntos} color={colorHex} weight={4} dashArray="6 8" />}
             {modo === 'zona'  && puntos.length > 2 && <Polygon  positions={puntos} color={colorHex} fillOpacity={0.25} />}
 
-            {/* Puntos intermedios */}
+            {/* Puntos intermedios con el icono estable */}
             {modo !== 'punto' && puntos.map((p, i) => (
-              <Marker key={i} position={p} icon={L.circleMarker ? undefined :
-                new L.Icon({ iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize: [10, 10], iconAnchor: [5, 5] })} />
+              <Marker key={i} position={p} icon={iconPuntoIntermedio} />
             ))}
           </MapContainer>
 

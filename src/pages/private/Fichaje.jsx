@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import NavBarIntranet from '../../components/layout/NavBarIntranet'
 import { useAuth } from '../../context/AuthContext'
 import { useFichaje } from '../../hooks/useSupabase'
 import { supabase } from '../../lib/supabase'
 import { LoadingPage } from '../../components/ui'
 import { ACTIVIDADES } from '../../constants/actividades'
+import Swal from 'sweetalert2' // Añadido SweetAlert2
 
 function pad(n) { return String(n).padStart(2, '0') }
 
@@ -30,7 +31,7 @@ function useCronometro(horaEntrada) {
 
 export default function Fichaje() {
   const { perfil } = useAuth()
-  const { sesionActiva, horaEntrada, actividadActual, loading, entrar, salir, refetch } = useFichaje(perfil?.nombre)
+  const { sesionActiva, horaEntrada, actividadActual, loading, entrar, salir } = useFichaje(perfil?.nombre)
   const [actividad,  setActividad]  = useState(ACTIVIDADES[0].value)
   const [historial,  setHistorial]  = useState([])
   const [cargandoBtn, setCargandoBtn] = useState(false)
@@ -47,14 +48,29 @@ export default function Fichaje() {
   }, [perfil, sesionActiva])
 
   async function handleAccion() {
-    setCargandoBtn(true)
     if (sesionActiva) {
-      if (!confirm('¿Terminar turno y guardar horas?')) { setCargandoBtn(false); return }
+      // Usamos Swal en lugar del confirm() problemático
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Terminar turno?',
+        text: 'Se guardarán tus horas en el registro oficial.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#ea580c',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, terminar',
+        cancelButtonText: 'Cancelar'
+      })
+      
+      if (!isConfirmed) return
+      
+      setCargandoBtn(true)
       await salir()
+      setCargandoBtn(false)
     } else {
+      setCargandoBtn(true)
       await entrar(actividad)
+      setCargandoBtn(false)
     }
-    setCargandoBtn(false)
   }
 
   if (loading) return <><NavBarIntranet /><LoadingPage /></>
@@ -79,7 +95,7 @@ export default function Fichaje() {
             {cronometro}
           </div>
 
-          {/* Selector actividad (solo si no está dentro) */}
+          {/* Selector actividad */}
           {!sesionActiva && (
             <select
               value={actividad}
