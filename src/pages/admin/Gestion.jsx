@@ -176,8 +176,8 @@ export default function Gestion() {
   const [modalOpen,  setModalOpen]  = useState(false)
   const [nuevoEvento, setNuevoEvento] = useState({ titulo: '', fecha: '', hora: '', descripcion: '' })
 
-  const [anuncio,       setAnuncio]       = useState({ mensaje: '', tipo: 'info' })
-  // Le añadimos el campo icono al estado inicial
+  // 1. AÑADIMOS EL CAMPO ICONO AL ESTADO INICIAL DEL ANUNCIO
+  const [anuncio,       setAnuncio]       = useState({ mensaje: '', tipo: 'azul', icono: '📢' })
   const [alertaPublica, setAlertaPublica] = useState({ mensaje: '', color: 'verde', icono: '📢' })
   const [guardandoAnuncio, setGuardandoAnuncio] = useState(false)
   const [guardandoAlerta,  setGuardandoAlerta]  = useState(false)
@@ -202,8 +202,9 @@ export default function Gestion() {
 
     setUsuarios(users ?? [])
     setRegistros(regs ?? [])
-    if (anun)  setAnuncio({ mensaje: anun.mensaje ?? '', tipo: anun.tipo ?? 'info' })
-    // Leemos el icono de la base de datos (y si no hay, ponemos el altavoz por defecto)
+    
+    // 2. RECUPERAMOS EL ICONO Y TIPO DE LA BBDD (o ponemos por defecto azul y altavoz)
+    if (anun)  setAnuncio({ mensaje: anun.mensaje ?? '', tipo: anun.tipo ?? 'azul', icono: anun.icono ?? '📢' })
     if (alert) setAlertaPublica({ mensaje: alert.mensaje ?? '', color: alert.color ?? 'verde', icono: alert.icono ?? '📢' })
     setLoading(false)
   }, [])
@@ -312,8 +313,11 @@ export default function Gestion() {
   async function publicarAnuncio(e) {
     e.preventDefault()
     setGuardandoAnuncio(true)
+    
+    // 3. ENVIAMOS EL ICONO A LA BASE DE DATOS
     const { error } = await supabase.from('anuncios')
-      .upsert({ id: 1, mensaje: anuncio.mensaje, tipo: anuncio.tipo, created_at: new Date() })
+      .upsert({ id: 1, mensaje: anuncio.mensaje, tipo: anuncio.tipo, icono: anuncio.icono, created_at: new Date() })
+    
     setGuardandoAnuncio(false)
     if (error) Swal.fire('Error', error.message, 'error')
     else Swal.fire({ icon: 'success', title: 'Tablón actualizado', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 })
@@ -322,7 +326,6 @@ export default function Gestion() {
   async function publicarAlerta(e) {
     e.preventDefault()
     setGuardandoAlerta(true)
-    // Ahora guardamos también el icono en la base de datos
     const { error } = await supabase.from('alerta_publica')
       .upsert({ id: 1, mensaje: alertaPublica.mensaje, color: alertaPublica.color, icono: alertaPublica.icono, activa: true, created_at: new Date() })
     setGuardandoAlerta(false)
@@ -376,33 +379,57 @@ export default function Gestion() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          
+          {/* 4. MODIFICAMOS EL DISEÑO DE LA MEGAFONÍA PARA QUE SEA IGUAL A LA ALERTA */}
           <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
             <h3 className="font-bold text-indigo-900 text-sm mb-0.5 flex items-center gap-2">📢 Megafonía Voluntarios</h3>
             <p className="text-xs text-indigo-400 mb-3">Visible en el Dashboard de todos los voluntarios</p>
-            <form onSubmit={publicarAnuncio} className="flex flex-col sm:flex-row gap-2">
-              <select value={anuncio.tipo} onChange={e => setAnuncio(a => ({ ...a, tipo: e.target.value }))}
-                className="w-full sm:w-28 px-3 py-2 border border-indigo-200 rounded-xl text-sm bg-white focus:outline-none">
-                <option value="info">🔵 Info</option>
-                <option value="aviso">🟡 Aviso</option>
-                <option value="urgente">🔴 Urgente</option>
-              </select>
-              <input type="text" required value={anuncio.mensaje}
-                onChange={e => setAnuncio(a => ({ ...a, mensaje: e.target.value }))}
-                placeholder="Mensaje para el equipo..."
-                className="flex-1 px-3 py-2 border border-indigo-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-              <Button type="submit" loading={guardandoAnuncio} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap text-sm px-4">
-                Publicar
-              </Button>
+            <form onSubmit={publicarAnuncio} className="flex flex-col gap-2">
+              
+              <div className="flex flex-col sm:flex-row gap-2">
+                {/* Desplegable de Iconos Internos */}
+                <select value={anuncio.icono} onChange={e => setAnuncio(a => ({ ...a, icono: e.target.value }))}
+                  className="w-full sm:w-auto px-3 py-2 border border-indigo-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
+                  <option value="📢">📢 Info</option>
+                  <option value="⚠️">⚠️ Atención</option>
+                  <option value="🎯">🎯 Objetivo</option>
+                  <option value="🛠️">🛠️ Tareas</option>
+                  <option value="📅">📅 Evento</option>
+                  <option value="🏆">🏆 Logro</option>
+                  <option value="🚨">🚨 Urgente</option>
+                </select>
+
+                {/* Desplegable de Colores */}
+                <select value={anuncio.tipo} onChange={e => setAnuncio(a => ({ ...a, tipo: e.target.value }))}
+                  className="w-full sm:w-36 px-3 py-2 border border-indigo-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
+                  <option value="verde">🟢 Verde</option>
+                  <option value="azul">🔵 Azul</option>
+                  <option value="amarillo">🟡 Amarillo</option>
+                  <option value="naranja">🟠 Naranja</option>
+                  <option value="rojo">🔴 Rojo</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input type="text" required value={anuncio.mensaje}
+                  onChange={e => setAnuncio(a => ({ ...a, mensaje: e.target.value }))}
+                  placeholder="Mensaje para el equipo..."
+                  className="flex-1 px-3 py-2 border border-indigo-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                <Button type="submit" loading={guardandoAnuncio} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap text-sm px-4">
+                  Publicar
+                </Button>
+              </div>
+
             </form>
           </div>
 
+          {/* Tarjeta de Alerta Población (se queda igual) */}
           <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
             <h3 className="font-bold text-red-900 text-sm mb-0.5 flex items-center gap-2">🚨 Alerta Población</h3>
             <p className="text-xs text-red-400 mb-3">Visible en la <strong>web pública</strong> para los vecinos</p>
             <form onSubmit={publicarAlerta} className="flex flex-col gap-2">
               
               <div className="flex flex-col sm:flex-row gap-2">
-                {/* Desplegable de Iconos */}
                 <select value={alertaPublica.icono} onChange={e => setAlertaPublica(a => ({ ...a, icono: e.target.value }))}
                   className="w-full sm:w-auto px-3 py-2 border border-red-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
                   <option value="📢">📢 Info</option>
@@ -415,7 +442,6 @@ export default function Gestion() {
                   <option value="🌪️">🌪️ Viento</option>
                 </select>
 
-                {/* Desplegable de Colores */}
                 <select value={alertaPublica.color} onChange={e => setAlertaPublica(a => ({ ...a, color: e.target.value }))}
                   className="w-full sm:w-36 px-3 py-2 border border-red-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
                   <option value="verde">🟢 Verde</option>
