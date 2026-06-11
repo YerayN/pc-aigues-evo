@@ -2,6 +2,19 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useQuery } from '../../hooks/useSupabase'
 
+// 🎨 ESTILOS DE ALTO IMPACTO PARA LA INTRANET
+const ESTILOS_ANUNCIO = {
+  verde:    'bg-gradient-to-r from-green-500 to-green-600 text-white border-b-4 border-green-700',
+  azul:     'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-b-4 border-blue-900',
+  amarillo: 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 border-b-4 border-yellow-600',
+  naranja:  'bg-gradient-to-r from-orange-500 to-orange-600 text-white border-b-4 border-orange-700',
+  rojo:     'bg-gradient-to-r from-red-600 to-red-700 text-white border-b-4 border-red-900',
+  // Fallbacks de seguridad por si hay datos antiguos en la BBDD
+  info:     'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-b-4 border-blue-900',
+  aviso:    'bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 border-b-4 border-yellow-600',
+  urgente:  'bg-gradient-to-r from-red-600 to-red-700 text-white border-b-4 border-red-900',
+}
+
 export default function NavBarIntranet() {
   const { perfil, esJefe, logout } = useAuth()
   const navigate = useNavigate()
@@ -16,21 +29,40 @@ export default function NavBarIntranet() {
     navigate('/login')
   }
 
-  const COLORES_TABLON = {
-    info:    'bg-[#279CF5] text-white',
-    aviso:   'bg-yellow-400 text-gray-900',
-    urgente: 'bg-red-600 text-white animate-pulse',
-  }
+  const claseAnuncio = ESTILOS_ANUNCIO[anuncio?.tipo] ?? ESTILOS_ANUNCIO.azul
+  const parpadeo = (anuncio?.tipo === 'rojo' || anuncio?.tipo === 'urgente') ? 'animate-pulse' : ''
 
   return (
     <>
+      {/* 🚨 PANEL DE MEGAFONÍA INTERNA 🚨 */}
       {anuncio?.mensaje && (
-        <div className={`w-full py-2 px-4 text-center text-sm font-bold ${COLORES_TABLON[anuncio.tipo] ?? 'bg-pc-blue text-white'} transition-all`}>
-          {anuncio.tipo === 'urgente' ? '⚫️' : anuncio.tipo === 'aviso' ? '🔴' : '🟢'} {anuncio.mensaje}
+        <div className={`w-full shadow-md relative z-50 overflow-hidden ${claseAnuncio} ${parpadeo}`}>
+          
+          {/* Patrón de rayas de emergencia */}
+          <div 
+            className="absolute inset-0 opacity-10 pointer-events-none" 
+            style={{ backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 10px, #000 10px, #000 20px)' }}
+          />
+          
+          <div className="container mx-auto px-4 py-2.5 relative z-10 flex items-center justify-center gap-3 md:gap-4 text-center sm:text-left">
+            <div className="text-3xl md:text-4xl drop-shadow-md shrink-0">
+              {anuncio.icono || '📢'}
+            </div>
+            
+            <div className="flex flex-col justify-center">
+              <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-80 mb-0.5">
+                Megafonía Interna
+              </span>
+              <span className="text-sm md:text-base font-bold leading-tight drop-shadow-sm">
+                {anuncio.mensaje}
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
-      <nav className="bg-pc-blue text-white shadow-lg sticky top-0 z-50">
+      {/* ── BARRA DE NAVEGACIÓN NORMAL ── */}
+      <nav className="bg-pc-blue text-white shadow-lg sticky top-0 z-40">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center gap-3">
 
           <Link to="/dashboard" className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition">

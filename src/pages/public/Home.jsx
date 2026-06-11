@@ -425,7 +425,7 @@ export default function Home() {
             {/* Redes sociales */}
             <div className="flex items-center gap-3">
               {/* Facebook */}
-              <a href="https://facebook.com" target="_blank" rel="noreferrer"
+              <a href="https://www.facebook.com/AyuntamientoDeAigues" target="_blank" rel="noreferrer"
                 className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
                 title="Facebook">
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -433,7 +433,7 @@ export default function Home() {
                 </svg>
               </a>
               {/* Instagram */}
-              <a href="https://instagram.com" target="_blank" rel="noreferrer"
+              <a href="https://www.instagram.com/ayuntamientodeaigues/" target="_blank" rel="noreferrer"
                 className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
                 title="Instagram">
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -441,7 +441,7 @@ export default function Home() {
                 </svg>
               </a>
               {/* Twitter/X */}
-              <a href="https://twitter.com" target="_blank" rel="noreferrer"
+              <a href="https://x.com/Ayunt_Aigues?s=20" target="_blank" rel="noreferrer"
                 className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
                 title="Twitter / X">
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
