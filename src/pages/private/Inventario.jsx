@@ -11,39 +11,52 @@ export default function Inventario() {
 
   const [almacen,    setAlmacen]    = useState([])
   const [prestamos,  setPrestamos]  = useState([])  // mis préstamos activos
-  const [activos,    setActivos]    = useState([])  // todos los activos (jefe)
+  const [activos,    setActivos]    = useState([])  // TODOS los activos para calcular el stock
   const [loading,    setLoading]    = useState(true)
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoStock,  setNuevoStock]  = useState('')
 
   const cargar = useCallback(async () => {
-    const [{ data: items }, { data: misMios }, { data: todos }] = await Promise.all([
+    // Ahora cargamos TODOS los préstamos activos para todo el mundo, así calculamos el stock real al vuelo
+    const [{ data: items }, { data: todosActivos }] = await Promise.all([
       supabase.from('inventario_material').select('*').order('nombre'),
-      supabase.from('inventario_prestamos').select('*').eq('usuario', miNombre).eq('devuelto', false),
-      esJefe ? supabase.from('inventario_prestamos').select('*').eq('devuelto', false).order('fecha_cogida', { ascending: false }) : { data: [] },
+      supabase.from('inventario_prestamos').select('*').eq('devuelto', false).order('fecha_cogida', { ascending: false }),
     ])
+    
     setAlmacen(items ?? [])
-    setPrestamos(misMios ?? [])
-    setActivos(todos ?? [])
+    setActivos(todosActivos ?? [])
+    // Filtramos la mochila personal fijándonos en los activos totales
+    setPrestamos((todosActivos ?? []).filter(p => p.usuario === miNombre))
     setLoading(false)
-  }, [miNombre, esJefe])
+  }, [miNombre])
 
-  useEffect(() => { cargar() }, [cargar])
+  useEffect(() => { 
+    cargar() 
+    
+    // Suscripciones para que la pantalla se actualice sola si otro voluntario coge algo
+    const prestamosChannel = supabase.channel('realtime-prestamos')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario_prestamos' }, cargar).subscribe()
+    const materialChannel = supabase.channel('realtime-material')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventario_material' }, cargar).subscribe()
+
+    return () => { 
+      supabase.removeChannel(prestamosChannel)
+      supabase.removeChannel(materialChannel)
+    }
+  }, [cargar])
 
   const toast = (icon, title) => Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 }).fire({ icon, title })
 
-  async function coger(id, nombre, stock) {
-    if (stock <= 0) return
-    await supabase.from('inventario_material').update({ stock_disponible: stock - 1 }).eq('id', id)
+  // 🛠️ LA MAGIA: Solo apuntamos el préstamo. El stock se recalcula solo al leer los datos.
+  async function coger(id, nombre, stockCalculado) {
+    if (stockCalculado <= 0) return
     await supabase.from('inventario_prestamos').insert([{ item_id: id, nombre_item: nombre, usuario: miNombre, devuelto: false, fecha_cogida: new Date().toISOString() }])
     toast('success', `Has cogido: ${nombre}`)
     cargar()
   }
 
-  async function devolver(idPrestamo, idMaterial) {
+  async function devolver(idPrestamo) {
     await supabase.from('inventario_prestamos').update({ devuelto: true }).eq('id', idPrestamo)
-    const { data: item } = await supabase.from('inventario_material').select('stock_disponible').eq('id', idMaterial).single()
-    if (item) await supabase.from('inventario_material').update({ stock_disponible: item.stock_disponible + 1 }).eq('id', idMaterial)
     toast('info', 'Material devuelto')
     cargar()
   }
@@ -64,9 +77,10 @@ export default function Inventario() {
     cargar(); toast('success', 'Artículo eliminado')
   }
 
-  async function ajustarStock(id, total, disponible, delta) {
-    if (delta < 0 && disponible <= 0) return
-    await supabase.from('inventario_material').update({ stock_total: total + delta, stock_disponible: disponible + delta }).eq('id', id)
+  async function ajustarStock(id, total, delta) {
+    if (delta < 0 && total <= 0) return
+    // Solo tocamos el stock total (ej: si compramos chalecos nuevos o se rompen)
+    await supabase.from('inventario_material').update({ stock_total: total + delta }).eq('id', id)
     cargar()
   }
 
@@ -108,7 +122,7 @@ export default function Inventario() {
                     </p>
                   </div>
                   <button
-                    onClick={() => devolver(p.id, p.item_id)}
+                    onClick={() => devolver(p.id)}
                     className="ml-2 bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs font-bold px-3 py-1.5 rounded-lg transition active:scale-95 whitespace-nowrap shrink-0"
                   >
                     Devolver ↩
@@ -131,7 +145,12 @@ export default function Inventario() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {almacen.map(item => {
-                const sinStock = item.stock_disponible <= 0
+                
+                // 🧮 CÁLCULO DINÁMICO DEL STOCK EN VIVO
+                const cantidadPrestada = activos.filter(p => p.item_id === item.id).length
+                const stockReal = item.stock_total - cantidadPrestada
+                const sinStock = stockReal <= 0
+
                 return (
                   <div key={item.id} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-between gap-2 hover:shadow-sm transition">
                     <div className="text-center">
@@ -139,14 +158,14 @@ export default function Inventario() {
                       <p className="font-bold text-gray-800 text-sm leading-tight">{item.nombre}</p>
                       <p className="text-xs text-gray-400 mt-1">
                         Quedan: <span className={`font-bold text-sm ${sinStock ? 'text-red-500' : 'text-blue-600'}`}>
-                          {item.stock_disponible}
+                          {stockReal}
                         </span>
                         <span className="text-gray-300">/{item.stock_total}</span>
                       </p>
                     </div>
 
                     <button
-                      onClick={() => coger(item.id, item.nombre, item.stock_disponible)}
+                      onClick={() => coger(item.id, item.nombre, stockReal)}
                       disabled={sinStock}
                       className={`w-full py-1.5 rounded-lg text-xs font-bold border transition active:scale-95
                         ${sinStock
@@ -159,11 +178,11 @@ export default function Inventario() {
 
                     {esJefe && (
                       <div className="flex gap-1">
-                        <button onClick={() => ajustarStock(item.id, item.stock_total, item.stock_disponible, -1)}
+                        <button onClick={() => ajustarStock(item.id, item.stock_total, -1)}
                           className="flex-1 text-[10px] text-orange-600 font-bold border border-orange-100 bg-orange-50 py-1 rounded-lg hover:bg-orange-100 transition">
                           −1
                         </button>
-                        <button onClick={() => ajustarStock(item.id, item.stock_total, item.stock_disponible, +1)}
+                        <button onClick={() => ajustarStock(item.id, item.stock_total, +1)}
                           className="flex-1 text-[10px] text-blue-600 font-bold border border-blue-100 bg-blue-50 py-1 rounded-lg hover:bg-blue-100 transition">
                           +1
                         </button>
