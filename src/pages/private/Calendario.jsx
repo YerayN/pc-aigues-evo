@@ -36,35 +36,50 @@ export default function Calendario() {
     })
 
   async function solicitarAsistencia(idEvento) {
-    const { isConfirmed } = await Swal.fire({
+    // 1. Añadimos el input de texto para que dejen notas
+    const { isConfirmed, value: notaVal } = await Swal.fire({
       title: '¿Quieres apuntarte?',
-      text: 'Confirma que tienes disponibilidad para este día y hora.',
+      text: 'Añade una nota para el jefe si tienes restricciones (Opcional):',
+      input: 'text',
+      inputPlaceholder: 'Ej: Podré ir de 14h a 15h...',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#003366',
       cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, contar conmigo',
+      confirmButtonText: '🙋‍♂️ Sí, contar conmigo',
       cancelButtonText: 'Cancelar',
     })
+    
     if (!isConfirmed) return
 
     Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading() })
 
     const { data: evento } = await supabase.from('servicios').select('*').eq('id', idEvento).single()
     const actuales = evento.candidatos ?? []
+    
     if (actuales.some(c => c.nombre === miNombre)) {
       Swal.fire({ icon: 'info', title: 'Ya habías enviado una solicitud', timer: 2000, showConfirmButton: false })
       return
     }
 
-    const nuevaLista = [...actuales, { nombre: miNombre, fecha: new Date() }]
-    const { error } = await supabase.from('servicios').update({ candidatos: nuevaLista }).eq('id', idEvento)
+    // 2. Guardamos la nota dentro del objeto del candidato
+    const nuevaLista = [...actuales, { nombre: miNombre, nota: notaVal || '', fecha: new Date() }]
+    
+    // 3. Forzamos a Supabase a devolver lo que ha actualizado con .select()
+    const { data: result, error } = await supabase.from('servicios').update({ candidatos: nuevaLista }).eq('id', idEvento).select()
 
-    if (!error) {
+    if (error) {
+      Swal.fire('Error', error.message, 'error')
+    } else if (!result || result.length === 0) {
+      // 4. Si el array de resultado viene vacío, es que Supabase lo ha bloqueado por RLS
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Bloqueo de seguridad', 
+        text: 'La solicitud no se guardó. El administrador debe revisar los permisos de actualización (RLS) en la base de datos.' 
+      })
+    } else {
       Swal.fire({ icon: 'success', title: '¡Solicitud enviada!', text: 'El Jefe ha recibido tu disponibilidad.', confirmButtonColor: '#003366' })
       cargar()
-    } else {
-      Swal.fire('Error', error.message, 'error')
     }
   }
 

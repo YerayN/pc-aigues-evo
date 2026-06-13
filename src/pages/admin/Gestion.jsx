@@ -107,12 +107,21 @@ function TarjetaServicio({ evento, usuarios, esHistorial, onBorrar, onRefresh })
           <div className="mb-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3">
             <p className="text-xs font-bold text-yellow-700 uppercase mb-2">🔔 Pendientes ({candidatos.length})</p>
             {candidatos.map((c, i) => (
-              <div key={i} className="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-yellow-100 mb-1">
-                <span className="text-sm font-medium">{c.nombre}</span>
-                <div className="flex gap-1">
-                  <button onClick={() => aceptarCandidato(i)} className="bg-green-500 hover:bg-green-600 text-white text-xs px-2.5 py-1 rounded-lg transition">✅</button>
-                  <button onClick={() => rechazarCandidato(i)} className="bg-red-400 hover:bg-red-500 text-white text-xs px-2.5 py-1 rounded-lg transition">❌</button>
+              <div key={i} className="flex flex-col bg-white px-3 py-2 rounded-lg border border-yellow-100 mb-1 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{c.nombre}</span>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => aceptarCandidato(i)} className="bg-green-500 hover:bg-green-600 text-white text-xs px-2.5 py-1 rounded-lg transition">✅</button>
+                    <button onClick={() => rechazarCandidato(i)} className="bg-red-400 hover:bg-red-500 text-white text-xs px-2.5 py-1 rounded-lg transition">❌</button>
+                  </div>
                 </div>
+                {/* 📝 NOTA DEL VOLUNTARIO */}
+                {c.nota && (
+                  <div className="mt-2 bg-yellow-50 border border-yellow-100 rounded p-1.5 flex items-start gap-1">
+                    <span className="text-xs">💬</span>
+                    <p className="text-xs text-gray-600 italic leading-tight">{c.nota}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -176,7 +185,6 @@ export default function Gestion() {
   const [modalOpen,  setModalOpen]  = useState(false)
   const [nuevoEvento, setNuevoEvento] = useState({ titulo: '', fecha: '', hora: '', descripcion: '' })
 
-  // 1. AÑADIMOS EL CAMPO ICONO AL ESTADO INICIAL DEL ANUNCIO
   const [anuncio,       setAnuncio]       = useState({ mensaje: '', tipo: 'azul', icono: '📢' })
   const [alertaPublica, setAlertaPublica] = useState({ mensaje: '', color: 'verde', icono: '📢' })
   const [guardandoAnuncio, setGuardandoAnuncio] = useState(false)
@@ -203,7 +211,6 @@ export default function Gestion() {
     setUsuarios(users ?? [])
     setRegistros(regs ?? [])
     
-    // 2. RECUPERAMOS EL ICONO Y TIPO DE LA BBDD (o ponemos por defecto azul y altavoz)
     if (anun)  setAnuncio({ mensaje: anun.mensaje ?? '', tipo: anun.tipo ?? 'azul', icono: anun.icono ?? '📢' })
     if (alert) setAlertaPublica({ mensaje: alert.mensaje ?? '', color: alert.color ?? 'verde', icono: alert.icono ?? '📢' })
     setLoading(false)
@@ -314,7 +321,6 @@ export default function Gestion() {
     e.preventDefault()
     setGuardandoAnuncio(true)
     
-    // 3. ENVIAMOS EL ICONO A LA BASE DE DATOS
     const { error } = await supabase.from('anuncios')
       .upsert({ id: 1, mensaje: anuncio.mensaje, tipo: anuncio.tipo, icono: anuncio.icono, created_at: new Date() })
     
@@ -380,14 +386,12 @@ export default function Gestion() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           
-          {/* 4. MODIFICAMOS EL DISEÑO DE LA MEGAFONÍA PARA QUE SEA IGUAL A LA ALERTA */}
           <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
             <h3 className="font-bold text-indigo-900 text-sm mb-0.5 flex items-center gap-2">📢 Megafonía Voluntarios</h3>
             <p className="text-xs text-indigo-400 mb-3">Visible en el Dashboard de todos los voluntarios</p>
             <form onSubmit={publicarAnuncio} className="flex flex-col gap-2">
               
               <div className="flex flex-col sm:flex-row gap-2">
-                {/* Desplegable de Iconos Internos */}
                 <select value={anuncio.icono} onChange={e => setAnuncio(a => ({ ...a, icono: e.target.value }))}
                   className="w-full sm:w-auto px-3 py-2 border border-indigo-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
                   <option value="📢">📢 Info</option>
@@ -399,7 +403,6 @@ export default function Gestion() {
                   <option value="🚨">🚨 Urgente</option>
                 </select>
 
-                {/* Desplegable de Colores */}
                 <select value={anuncio.tipo} onChange={e => setAnuncio(a => ({ ...a, tipo: e.target.value }))}
                   className="w-full sm:w-36 px-3 py-2 border border-indigo-200 rounded-xl text-sm bg-white focus:outline-none font-medium">
                   <option value="verde">🟢 Verde</option>
@@ -423,7 +426,6 @@ export default function Gestion() {
             </form>
           </div>
 
-          {/* Tarjeta de Alerta Población (se queda igual) */}
           <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
             <h3 className="font-bold text-red-900 text-sm mb-0.5 flex items-center gap-2">🚨 Alerta Población</h3>
             <p className="text-xs text-red-400 mb-3">Visible en la <strong>web pública</strong> para los vecinos</p>
