@@ -103,6 +103,12 @@ export default function NavBarPublica() {
               Únete
             </button>
             <Link
+              to="/equipo"
+              className="px-3 py-2 rounded-lg hover:bg-white/10 hover:text-pc-orange transition text-sm"
+            >
+              El Equipo
+            </Link>
+            <Link
               to="/reportar"
               className="px-3 py-2 rounded-lg hover:bg-white/10 hover:text-pc-orange transition text-sm"
             >
@@ -146,6 +152,13 @@ export default function NavBarPublica() {
             >
               🤝 &nbsp; Únete como voluntario
             </button>
+            <Link
+              to="/equipo"
+              onClick={cerrar}
+              className="block px-5 py-4 text-sm hover:bg-white/10 transition border-b border-white/5"
+            >
+              👥 &nbsp; El Equipo
+            </Link>
             <Link
               to="/reportar"
               onClick={cerrar}

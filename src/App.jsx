@@ -7,6 +7,7 @@ import { LoadingPage } from './components/ui'
 const Home       = lazy(() => import('./pages/public/Home'))
 const Reportar   = lazy(() => import('./pages/public/Reportar'))
 const Login      = lazy(() => import('./pages/public/Login'))
+const About      = lazy(() => import('./pages/public/About')) // 👈 AQUÍ IMPORTAMOS LA PÁGINA NUEVA
 
 const Dashboard  = lazy(() => import('./pages/private/Dashboard'))
 const Calendario = lazy(() => import('./pages/private/Calendario'))
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/"         element={<Home />} />
             <Route path="/reportar" element={<Reportar />} />
             <Route path="/login"    element={<Login />} />
+            <Route path="/equipo"   element={<About />} /> {/* 👈 AQUÍ CREAMOS LA RUTA */}
 
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard"  element={<Dashboard />} />
