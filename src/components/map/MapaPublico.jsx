@@ -125,11 +125,17 @@ VITE_SUPABASE_ANON_KEY=...`}
           const hex   = COLOR_HEX[el.color]   ?? COLOR_HEX.azul
           const icono = crearIcono(el.color)
           
-          // 📝 AÑADIDO: whitespace-pre-line para respetar los saltos de línea en la descripción
           const popup = (
             <Popup>
-              <strong>{el.titulo}</strong>
-              {el.descripcion && <p className="text-xs mt-1 whitespace-pre-line leading-relaxed">{el.descripcion}</p>}
+              {/* Le forzamos un ancho mínimo de 220px para que el texto respire */}
+              <div className="min-w-[220px]">
+                <strong className="block text-sm text-gray-800 mb-0.5">{el.titulo}</strong>
+                {el.descripcion && (
+                  <p className="text-xs mt-1 whitespace-pre-line leading-relaxed text-gray-600">
+                    {el.descripcion}
+                  </p>
+                )}
+              </div>
             </Popup>
           )
 
