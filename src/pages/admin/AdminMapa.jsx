@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { Button, Badge } from '../../components/ui'
 import Swal from 'sweetalert2'
 
+// Configuración por defecto de Leaflet
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -13,14 +14,45 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-// Creamos un icono limpio y estático para los puntos intermedios y evitamos fallos
 const iconPuntoIntermedio = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconSize: [12, 12],
   iconAnchor: [6, 6]
 })
 
-const COLOR_HEX = { rojo: '#e11d48', azul: '#2563eb', verde: '#16a34a', naranja: '#ea580c' }
+// 🎨 NUEVA PALETA DE COLORES AMPLIADA (Para líneas y polígonos)
+const COLOR_HEX = { 
+  rojo: '#e11d48', 
+  azul: '#2563eb', 
+  verde: '#16a34a', 
+  naranja: '#ea580c',
+  amarillo: '#eab308',
+  celeste: '#0ea5e9',
+  morado: '#9333ea',
+  gris: '#4b5563'
+}
+
+// 🎨 NUEVOS ICONOS AMPLIADOS (Para los marcadores de puntos)
+const ICONOS_CATEGORIA = {
+  azul:     { emoji: 'ℹ️', bg: 'bg-blue-500',   border: 'border-blue-700' },
+  rojo:     { emoji: '🔥', bg: 'bg-red-500',    border: 'border-red-700' },
+  naranja:  { emoji: '🚧', bg: 'bg-orange-500', border: 'border-orange-700' },
+  verde:    { emoji: '🏥', bg: 'bg-green-500',  border: 'border-green-700' },
+  amarillo: { emoji: '⚠️', bg: 'bg-yellow-400', border: 'border-yellow-600' },
+  celeste:  { emoji: '💧', bg: 'bg-sky-400',    border: 'border-sky-600' },
+  morado:   { emoji: '🔎', bg: 'bg-purple-500', border: 'border-purple-700' },
+  gris:     { emoji: '🚁', bg: 'bg-gray-500',   border: 'border-gray-700' },
+}
+
+const crearIcono = (color) => {
+  const c = ICONOS_CATEGORIA[color] || ICONOS_CATEGORIA.azul
+  return L.divIcon({
+    className: 'bg-transparent',
+    html: `<div class="w-8 h-8 rounded-full ${c.bg} ${c.border} border-2 flex items-center justify-center text-sm shadow-lg transform -translate-y-2 cursor-pointer">${c.emoji}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32]
+  })
+}
 
 function MapClickHandler({ onClic }) {
   useMapEvents({ click: e => onClic(e.latlng) })
@@ -89,7 +121,6 @@ export default function AdminMapa() {
       return
     }
     
-    // Validaciones separadas para que nadie guarde áreas rotas de 2 puntos
     if (modo === 'linea' && puntos.length < 2) {
       Swal.fire({ icon: 'warning', title: 'Faltan puntos', text: 'Necesitas dibujar al menos 2 puntos para un corte de vía.' })
       return
@@ -149,18 +180,15 @@ export default function AdminMapa() {
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <MapClickHandler onClic={handleMapClic} />
 
-            {/* Preview del dibujo actual */}
-            {modo === 'punto' && puntoClic && <Marker position={[puntoClic.lat, puntoClic.lng]} />}
+            {modo === 'punto' && puntoClic && <Marker position={[puntoClic.lat, puntoClic.lng]} icon={crearIcono(color)} />}
             {modo === 'linea' && puntos.length > 1 && <Polyline positions={puntos} color={colorHex} weight={4} dashArray="6 8" />}
             {modo === 'zona'  && puntos.length > 2 && <Polygon  positions={puntos} color={colorHex} fillOpacity={0.25} />}
 
-            {/* Puntos intermedios con el icono estable */}
             {modo !== 'punto' && puntos.map((p, i) => (
               <Marker key={i} position={p} icon={iconPuntoIntermedio} />
             ))}
           </MapContainer>
 
-          {/* Tooltip instrucciones */}
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[400] bg-white/95 backdrop-blur px-4 py-1.5 rounded-full shadow text-xs font-bold text-pc-blue border border-blue-100">
             {modo === 'punto' ? '📍 Toca en el mapa para colocar el marcador'
               : modo === 'linea' ? `➖ ${puntos.length} puntos — toca para añadir más`
@@ -185,23 +213,31 @@ export default function AdminMapa() {
                 ))}
               </div>
 
-              {/* Título y color */}
+              {/* Título */}
               <input type="text" required placeholder="Título del aviso..." value={titulo}
                 onChange={e => setTitulo(e.target.value)}
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pc-orange outline-none" />
 
-              <div className="grid grid-cols-2 gap-3">
-                <select value={color} onChange={e => setColor(e.target.value)}
-                  className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none">
-                  <option value="azul">🔵 Azul (Info)</option>
-                  <option value="rojo">🔴 Rojo (Peligro)</option>
-                  <option value="naranja">🟠 Naranja (Obras)</option>
-                  <option value="verde">🟢 Verde (Seguro)</option>
-                </select>
-                <input type="text" placeholder="Descripción..." value={desc}
-                  onChange={e => setDesc(e.target.value)}
-                  className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pc-orange outline-none" />
-              </div>
+              {/* LISTA DE COLORES AMPLIADA */}
+              <select value={color} onChange={e => setColor(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-pc-orange outline-none font-medium">
+                <option value="azul">ℹ️ Info General (Azul)</option>
+                <option value="rojo">🔥 Incendio / Peligro (Rojo)</option>
+                <option value="naranja">🚧 Obras / Corte (Naranja)</option>
+                <option value="amarillo">⚠️ Accidente / Tráfico (Amarillo)</option>
+                <option value="verde">🏥 Salud / Base Segura (Verde)</option>
+                <option value="celeste">💧 Inundación / Agua (Celeste)</option>
+                <option value="morado">🔎 Búsqueda de Personas (Morado)</option>
+                <option value="gris">🚁 Punto Encuentro / Helipuerto (Gris)</option>
+              </select>
+
+              <textarea 
+                placeholder="Ej: Farmacia abierta 24h.&#10;Tel: 965 123 456&#10;Email: info@farmacia.es" 
+                value={desc}
+                onChange={e => setDesc(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pc-orange outline-none resize-none" 
+              />
 
               {/* Programación */}
               <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
@@ -251,7 +287,7 @@ export default function AdminMapa() {
               {elementos.length === 0 && <p className="text-xs text-gray-400 italic text-center py-4">El mapa está limpio</p>}
               {elementos.map(el => {
                 const { label, variant } = estadoElemento(el)
-                const icono = el.tipo === 'punto' ? '📍' : el.tipo === 'linea' ? '➖' : '⬠'
+                const icono = el.tipo === 'punto' ? ICONOS_CATEGORIA[el.color]?.emoji || '📍' : el.tipo === 'linea' ? '➖' : '⬠'
                 return (
                   <div key={el.id} className="flex items-center justify-between bg-gray-50 px-3 py-2.5 rounded-xl border border-gray-100 hover:bg-white hover:shadow-sm transition">
                     <div className="min-w-0 flex-1">
