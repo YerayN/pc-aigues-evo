@@ -7,8 +7,8 @@ export default function SobreNosotros() {
 
   useEffect(() => {
     async function cargarEquipo() {
-      // Pedimos a Supabase la lista de todos los perfiles registrados
-      const { data } = await supabase.from('perfiles').select('*').order('nombre')
+      // Ahora pedimos los datos a la tabla nueva y los ordenamos por la columna 'orden'
+      const { data } = await supabase.from('equipo_publico').select('*').order('orden', { ascending: true })
       if (data) setVoluntarios(data)
     }
     cargarEquipo()
@@ -52,10 +52,10 @@ export default function SobreNosotros() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
           
           {voluntarios.map((vol, index) => {
-            // Si el voluntario aún no tiene foto, le ponemos un muñequito por defecto
+            // Si te dejas alguna foto en blanco en la base de datos, sale el muñequito genérico
             const fotoPerfil = vol.foto_url 
               ? vol.foto_url 
-              : 'https://cdn-icons-png.flaticon.com/512/847/847969.png' // Avatar genérico
+              : 'https://cdn-icons-png.flaticon.com/512/847/847969.png'
             
             return (
               <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
@@ -74,8 +74,9 @@ export default function SobreNosotros() {
                   <p className="font-bold text-gray-800 text-sm leading-tight">
                     {vol.nombre}
                   </p>
+                  {/* Aquí pintamos directamente el cargo que hayas escrito a mano */}
                   <p className="text-[10px] text-pc-blue font-bold uppercase tracking-widest mt-1.5 opacity-80">
-                    {vol.rol === 'jefe' ? 'Coordinador' : 'Voluntario'}
+                    {vol.cargo || 'Voluntario'}
                   </p>
                 </div>
 
