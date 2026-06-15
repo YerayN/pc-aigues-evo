@@ -10,14 +10,39 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-const COLOR_LEAFLET = { azul: 'blue', rojo: 'red', verde: 'green', naranja: 'orange', amarillo: 'gold' }
-const COLOR_HEX     = { rojo: '#e11d48', azul: '#2563eb', verde: '#16a34a', naranja: '#ea580c', amarillo: '#ca8a04' }
+// 🎨 LA MISMA PALETA DE COLORES QUE EN EL ADMIN
+const COLOR_HEX = { 
+  rojo: '#e11d48', 
+  azul: '#2563eb', 
+  verde: '#16a34a', 
+  naranja: '#ea580c',
+  amarillo: '#eab308',
+  celeste: '#0ea5e9',
+  morado: '#9333ea',
+  gris: '#4b5563'
+}
 
+// 🎨 LOS MISMOS EMOJIS QUE EN EL ADMIN
+const ICONOS_CATEGORIA = {
+  azul:     { emoji: 'ℹ️', bg: 'bg-blue-500',   border: 'border-blue-700' },
+  rojo:     { emoji: '🔥', bg: 'bg-red-500',    border: 'border-red-700' },
+  naranja:  { emoji: '🚧', bg: 'bg-orange-500', border: 'border-orange-700' },
+  verde:    { emoji: '🏥', bg: 'bg-green-500',  border: 'border-green-700' },
+  amarillo: { emoji: '⚠️', bg: 'bg-yellow-400', border: 'border-yellow-600' },
+  celeste:  { emoji: '💧', bg: 'bg-sky-400',    border: 'border-sky-600' },
+  morado:   { emoji: '🔎', bg: 'bg-purple-500', border: 'border-purple-700' },
+  gris:     { emoji: '🚁', bg: 'bg-gray-500',   border: 'border-gray-700' },
+}
+
+// FÁBRICA DE ICONOS ACTUALIZADA
 function crearIcono(color) {
-  return new L.Icon({
-    iconUrl:   `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${COLOR_LEAFLET[color] ?? 'blue'}.png`,
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
+  const c = ICONOS_CATEGORIA[color] || ICONOS_CATEGORIA.azul
+  return L.divIcon({
+    className: 'bg-transparent',
+    html: `<div class="w-8 h-8 rounded-full ${c.bg} ${c.border} border-2 flex items-center justify-center text-sm shadow-lg transform -translate-y-2 cursor-pointer">${c.emoji}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32] // Ajustado para que el popup salga justo encima del emoji
   })
 }
 
@@ -90,10 +115,12 @@ VITE_SUPABASE_ANON_KEY=...`}
         {visibles.map(el => {
           const hex   = COLOR_HEX[el.color]   ?? COLOR_HEX.azul
           const icono = crearIcono(el.color)
+          
+          // 📝 AÑADIDO: whitespace-pre-line para respetar los saltos de línea en la descripción
           const popup = (
             <Popup>
               <strong>{el.titulo}</strong>
-              {el.descripcion && <p className="text-xs mt-1">{el.descripcion}</p>}
+              {el.descripcion && <p className="text-xs mt-1 whitespace-pre-line leading-relaxed">{el.descripcion}</p>}
             </Popup>
           )
 

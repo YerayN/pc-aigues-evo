@@ -180,6 +180,7 @@ export default function AdminMapa() {
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <MapClickHandler onClic={handleMapClic} />
 
+            {/* PREVIEW DEL DIBUJO ACTUAL */}
             {modo === 'punto' && puntoClic && <Marker position={[puntoClic.lat, puntoClic.lng]} icon={crearIcono(color)} />}
             {modo === 'linea' && puntos.length > 1 && <Polyline positions={puntos} color={colorHex} weight={4} dashArray="6 8" />}
             {modo === 'zona'  && puntos.length > 2 && <Polygon  positions={puntos} color={colorHex} fillOpacity={0.25} />}
@@ -187,6 +188,20 @@ export default function AdminMapa() {
             {modo !== 'punto' && puntos.map((p, i) => (
               <Marker key={i} position={p} icon={iconPuntoIntermedio} />
             ))}
+
+            {/* 🗺️ AQUÍ DIBUJAMOS LOS ELEMENTOS YA GUARDADOS EN BBDD */}
+            {elementos.map(el => {
+              if (el.tipo === 'punto' && el.lat && el.lng) {
+                return <Marker key={el.id} position={[el.lat, el.lng]} icon={crearIcono(el.color)} />
+              }
+              if (el.tipo === 'linea' && el.coordenadas) {
+                return <Polyline key={el.id} positions={el.coordenadas} color={COLOR_HEX[el.color] || COLOR_HEX.azul} weight={4} />
+              }
+              if (el.tipo === 'zona' && el.coordenadas) {
+                return <Polygon key={el.id} positions={el.coordenadas} color={COLOR_HEX[el.color] || COLOR_HEX.azul} fillOpacity={0.25} />
+              }
+              return null
+            })}
           </MapContainer>
 
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[400] bg-white/95 backdrop-blur px-4 py-1.5 rounded-full shadow text-xs font-bold text-pc-blue border border-blue-100">
