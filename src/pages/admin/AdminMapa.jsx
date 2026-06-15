@@ -32,25 +32,38 @@ const COLOR_HEX = {
   gris: '#4b5563'
 }
 
-// 🎨 NUEVOS ICONOS AMPLIADOS (Para los marcadores de puntos)
+// 🎨 LOS MISMOS EMOJIS, PERO AHORA SIN FONDOS NI BORDES
 const ICONOS_CATEGORIA = {
-  azul:     { emoji: 'ℹ️', bg: 'bg-blue-500',   border: 'border-blue-700' },
-  rojo:     { emoji: '🔥', bg: 'bg-red-500',    border: 'border-red-700' },
-  naranja:  { emoji: '🚧', bg: 'bg-orange-500', border: 'border-orange-700' },
-  verde:    { emoji: '🏥', bg: 'bg-green-500',  border: 'border-green-700' },
-  amarillo: { emoji: '⚠️', bg: 'bg-yellow-400', border: 'border-yellow-600' },
-  celeste:  { emoji: '💧', bg: 'bg-sky-400',    border: 'border-sky-600' },
-  morado:   { emoji: '🔎', bg: 'bg-purple-500', border: 'border-purple-700' },
-  gris:     { emoji: '🚁', bg: 'bg-gray-500',   border: 'border-gray-700' },
+  azul:     { emoji: 'ℹ️' },
+  rojo:     { emoji: '🔥' },
+  naranja:  { emoji: '🚧' },
+  verde:    { emoji: '🏥' },
+  amarillo: { emoji: '⚠️' },
+  celeste:  { emoji: '💧' },
+  morado:   { emoji: '🔎' },
+  gris:     { emoji: '🚁' },
 }
 
+// 🪄 NUEVO DISEÑO FLOTANTE Y LIMPIO
 const crearIcono = (color) => {
   const c = ICONOS_CATEGORIA[color] || ICONOS_CATEGORIA.azul
+  const hex = COLOR_HEX[color] || COLOR_HEX.azul
+  
   return L.divIcon({
-    className: 'bg-transparent',
-    html: `<div class="w-8 h-8 rounded-full ${c.bg} ${c.border} border-2 flex items-center justify-center text-sm shadow-lg transform -translate-y-2 cursor-pointer">${c.emoji}</div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32]
+    className: 'bg-transparent border-0',
+    html: `
+      <div class="relative flex flex-col items-center justify-center w-10 h-12 transition-transform hover:scale-110 cursor-pointer">
+        {/* Emoji grande con halo blanco y sombrita negra para destacar */}
+        <span class="text-[32px] leading-none relative z-10" style="filter: drop-shadow(0px 0px 4px rgba(255,255,255,1)) drop-shadow(0px 2px 2px rgba(0,0,0,0.3));">
+          ${c.emoji}
+        </span>
+        {/* Sombra de color en el suelo del mapa */}
+        <div class="absolute bottom-0 w-6 h-1.5 rounded-[100%] blur-[2px] opacity-80" style="background-color: ${hex};"></div>
+      </div>
+    `,
+    iconSize: [40, 48],
+    iconAnchor: [20, 48],
+    popupAnchor: [0, -48]
   })
 }
 
