@@ -34,7 +34,7 @@ const ICONOS_CATEGORIA = {
   gris:     { emoji: '🚁' },
 }
 
-// 🪄 NUEVO DISEÑO FLOTANTE Y LIMPIO
+// 🪄 NUEVO DISEÑO FLOTANTE Y LIMPIO (SIN COMENTARIOS QUE ROMPAN EL MAPA)
 const crearIcono = (color) => {
   const c = ICONOS_CATEGORIA[color] || ICONOS_CATEGORIA.azul
   const hex = COLOR_HEX[color] || COLOR_HEX.azul
@@ -43,11 +43,9 @@ const crearIcono = (color) => {
     className: 'bg-transparent border-0',
     html: `
       <div class="relative flex flex-col items-center justify-center w-10 h-12 transition-transform hover:scale-110 cursor-pointer">
-        {/* Emoji grande con halo blanco y sombrita negra para destacar */}
         <span class="text-[32px] leading-none relative z-10" style="filter: drop-shadow(0px 0px 4px rgba(255,255,255,1)) drop-shadow(0px 2px 2px rgba(0,0,0,0.3));">
           ${c.emoji}
         </span>
-        {/* Sombra de color en el suelo del mapa */}
         <div class="absolute bottom-0 w-6 h-1.5 rounded-[100%] blur-[2px] opacity-80" style="background-color: ${hex};"></div>
       </div>
     `,
