@@ -153,7 +153,7 @@ export default function NavBarPublica() {
               🤝 &nbsp; Únete como voluntario
             </button>
             <Link
-              to="/equipo"
+              to="#"
               onClick={cerrar}
               className="block px-5 py-4 text-sm hover:bg-white/10 transition border-b border-white/5"
             >
