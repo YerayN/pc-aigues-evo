@@ -103,7 +103,7 @@ export default function NavBarPublica() {
               Únete
             </button>
             <Link
-              to="/equipo"
+              to="#"
               className="px-3 py-2 rounded-lg hover:bg-white/10 hover:text-pc-orange transition text-sm"
             >
               El Equipo
